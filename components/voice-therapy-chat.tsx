@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
-import { MicOff, Volume2, VolumeX } from "lucide-react"
+import { Volume2, VolumeX, Phone, PhoneOff } from "lucide-react"
 import { saveSession, getLastConversationSummary, type TherapySession } from "@/lib/session-storage"
 import { loadUserProfile, saveUserProfile } from "@/lib/user-profile"
 import { VideoAvatar } from "@/components/video-avatar"
@@ -478,69 +478,121 @@ export default function VoiceTherapyChat() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
-      {!isLoggedIn && (
-        <div className="absolute top-4 right-4 z-50 flex items-center gap-4">
-          {freeTrialActive && (
-            <div className="bg-white px-4 py-2 rounded-lg shadow-md">
-              <p className="text-sm font-medium">Free trial: {formatTime(freeTrialTimeLeft)}</p>
-            </div>
-          )}
-          <Button onClick={() => setShowLoginModal(true)} variant="outline">
-            Sign In
-          </Button>
-        </div>
-      )}
-
-      {isLoggedIn && user && (
-        <UserMenu
-          user={user}
-          purchasedHours={purchasedHours}
-          usedMinutes={usedMinutes}
-          onLogout={handleLogout}
-          onViewAccount={() => setShowUserAccount(true)}
-        />
-      )}
-
-      <div className="flex-1 flex flex-col items-center justify-center p-8">
-        <VideoAvatar
-          isListening={status === "listening"}
-          isSpeaking={status === "speaking"}
-          currentSpeaker={currentSpeaker}
-          currentText={currentText}
-        />
-
-        <div className="mt-8 flex gap-4">
-          {status === "idle" ? (
-            <Button onClick={startSession} size="lg" className="px-8">
-              Start Session
-            </Button>
-          ) : (
-            <Button onClick={stopSession} size="lg" variant="destructive" className="px-8">
-              <MicOff className="mr-2 h-5 w-5" />
-              End Session
-            </Button>
-          )}
-
-          <Button onClick={toggleAudio} size="lg" variant="outline">
-            {isAudioEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
-          </Button>
+    <div className="flex h-screen bg-white">
+      <div className="w-80 border-r border-gray-200 p-6 flex flex-col">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Arina</h1>
+          <p className="text-sm text-gray-600">AI Counselor</p>
         </div>
 
-        {status !== "idle" && (
-          <div className="mt-4 text-center">
-            <p className="text-sm text-gray-600">Session Duration: {formatTime(sessionDuration)}</p>
-            {transcript && <p className="text-sm text-gray-500 mt-2">Listening: {transcript}</p>}
-          </div>
-        )}
+        <div className="flex-1 flex flex-col justify-center items-center">
+          <VideoAvatar
+            isListening={status === "listening"}
+            isSpeaking={status === "speaking"}
+            currentSpeaker={currentSpeaker}
+            currentText={currentText}
+          />
+        </div>
 
-        {elevenLabsError && (
-          <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-sm text-red-600">{elevenLabsError}</p>
+        {!isLoggedIn && freeTrialActive && (
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+            <p className="text-sm text-blue-900 font-medium">Free trial: {formatTime(freeTrialTimeLeft)}</p>
           </div>
         )}
       </div>
 
+      <div className="flex-1 flex flex-col items-center justify-center p-8">
+        <div className="max-w-2xl w-full space-y-8">
+          {/* Status indicator */}
+          <div className="text-center">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full">
+              <div
+                className={`w-2 h-2 rounded-full ${
+                  status === "listening"
+                    ? "bg-green-500 animate-pulse"
+                    : status === "processing"
+                      ? "bg-yellow-500 animate-pulse"
+                      : status === "speaking"
+                        ? "bg-blue-500 animate-pulse"
+                        : "bg-gray-400"
+                }`}
+              />
+              <span className="text-sm font-medium text-gray-700">
+                {status === "idle"
+                  ? "Ready"
+                  : status === "listening"
+                    ? "Listening..."
+                    : status === "processing"
+                      ? "Thinking..."
+                      : status === "speaking"
+                        ? "Speaking..."
+                        : "Ready"}
+              </span>
+            </div>
+          </div>
+
+          {/* Session duration */}
+          {status !== "idle" && (
+            <div className="text-center">
+              <p className="text-sm text-gray-600">Session: {formatTime(sessionDuration)}</p>
+              {transcript && <p className="text-xs text-gray-500 mt-2">{transcript}</p>}
+            </div>
+          )}
+
+          <div className="flex justify-center">
+            {status === "idle" ? (
+              <button
+                onClick={startSession}
+                className="w-20 h-20 rounded-full bg-green-500 hover:bg-green-600 active:bg-green-700 shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center"
+                aria-label="Start call"
+              >
+                <Phone className="w-8 h-8 text-white" />
+              </button>
+            ) : (
+              <button
+                onClick={stopSession}
+                className="w-20 h-20 rounded-full bg-red-500 hover:bg-red-600 active:bg-red-700 shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center"
+                aria-label="End call"
+              >
+                <PhoneOff className="w-8 h-8 text-white" />
+              </button>
+            )}
+          </div>
+
+          {/* Audio toggle */}
+          <div className="flex justify-center">
+            <Button variant="ghost" size="sm" onClick={toggleAudio} className="text-gray-600">
+              {isAudioEnabled ? <Volume2 className="w-5 h-5 mr-2" /> : <VolumeX className="w-5 h-5 mr-2" />}
+              {isAudioEnabled ? "Audio On" : "Audio Off"}
+            </Button>
+          </div>
+
+          {/* Error messages */}
+          {elevenLabsError && (
+            <div className="text-center p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-600">{elevenLabsError}</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="absolute top-4 right-4 z-50">
+        {isLoggedIn && user ? (
+          <UserMenu
+            user={user}
+            purchasedHours={purchasedHours}
+            usedMinutes={usedMinutes}
+            onViewAccount={() => setShowUserAccount(true)}
+            onLogout={handleLogout}
+          />
+        ) : (
+          <Button variant="outline" onClick={() => setShowLoginModal(true)}>
+            Sign In
+          </Button>
+        )}
+      </div>
+
+      {/* Modals */}
       <audio ref={audioRef} className="hidden" />
 
       <LoginModal
@@ -557,7 +609,7 @@ export default function VoiceTherapyChat() {
 
       {showPaymentModal && <PaymentModal isOpen={showPaymentModal} onClose={() => setShowPaymentModal(false)} />}
 
-      {showUserAccount && (
+      {showUserAccount && user && (
         <UserAccountPage
           user={user}
           purchasedHours={purchasedHours}
