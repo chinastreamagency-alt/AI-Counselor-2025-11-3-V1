@@ -478,14 +478,10 @@ export default function VoiceTherapyChat() {
   }
 
   return (
-    <div className="flex h-screen bg-white">
-      <div className="w-80 border-r border-gray-200 p-6 flex flex-col">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Arina</h1>
-          <p className="text-sm text-gray-600">AI Counselor</p>
-        </div>
-
-        <div className="flex-1 flex flex-col justify-center items-center">
+    <div className="relative min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900 flex items-center justify-center p-4">
+      {/* Video Avatar - centered and large */}
+      <div className="w-full max-w-2xl">
+        <div className="relative mb-8">
           <VideoAvatar
             isListening={status === "listening"}
             isSpeaking={status === "speaking"}
@@ -494,88 +490,92 @@ export default function VoiceTherapyChat() {
           />
         </div>
 
+        {/* Status indicator */}
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full">
+            <div
+              className={`w-2 h-2 rounded-full ${
+                status === "listening"
+                  ? "bg-green-400 animate-pulse"
+                  : status === "processing"
+                    ? "bg-yellow-400 animate-pulse"
+                    : status === "speaking"
+                      ? "bg-blue-400 animate-pulse"
+                      : "bg-gray-400"
+              }`}
+            />
+            <span className="text-sm font-medium text-white">
+              {status === "idle"
+                ? "Ready"
+                : status === "listening"
+                  ? "Listening..."
+                  : status === "processing"
+                    ? "Thinking..."
+                    : status === "speaking"
+                      ? "Speaking..."
+                      : "Ready"}
+            </span>
+          </div>
+        </div>
+
+        {/* Free trial timer */}
         {!isLoggedIn && freeTrialActive && (
-          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-            <p className="text-sm text-blue-900 font-medium">Free trial: {formatTime(freeTrialTimeLeft)}</p>
+          <div className="text-center mb-4">
+            <p className="text-sm text-white/80 font-medium">Free trial: {formatTime(freeTrialTimeLeft)}</p>
+          </div>
+        )}
+
+        {/* Session duration */}
+        {status !== "idle" && (
+          <div className="text-center mb-4">
+            <p className="text-sm text-white/70">Session: {formatTime(sessionDuration)}</p>
+            {transcript && <p className="text-xs text-white/50 mt-2">{transcript}</p>}
+          </div>
+        )}
+
+        {/* Call button - centered like phone interface */}
+        <div className="flex justify-center mb-6">
+          {status === "idle" ? (
+            <button
+              onClick={startSession}
+              className="w-20 h-20 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 hover:from-cyan-500 hover:to-blue-600 shadow-2xl hover:shadow-cyan-500/50 transition-all duration-300 flex items-center justify-center group"
+              aria-label="Start Conversation"
+            >
+              <Phone className="w-8 h-8 text-white group-hover:scale-110 transition-transform" />
+            </button>
+          ) : (
+            <button
+              onClick={stopSession}
+              className="w-20 h-20 rounded-full bg-red-500 hover:bg-red-600 shadow-2xl hover:shadow-red-500/50 transition-all duration-300 flex items-center justify-center group"
+              aria-label="End call"
+            >
+              <PhoneOff className="w-8 h-8 text-white group-hover:scale-110 transition-transform" />
+            </button>
+          )}
+        </div>
+
+        {/* Audio toggle */}
+        <div className="flex justify-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleAudio}
+            className="text-white/80 hover:text-white hover:bg-white/10"
+          >
+            {isAudioEnabled ? <Volume2 className="w-5 h-5 mr-2" /> : <VolumeX className="w-5 h-5 mr-2" />}
+            {isAudioEnabled ? "Audio On" : "Audio Off"}
+          </Button>
+        </div>
+
+        {/* Error messages */}
+        {elevenLabsError && (
+          <div className="text-center mt-4 p-4 bg-red-500/20 backdrop-blur-sm border border-red-400/30 rounded-lg">
+            <p className="text-sm text-red-200">{elevenLabsError}</p>
           </div>
         )}
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center p-8">
-        <div className="max-w-2xl w-full space-y-8">
-          {/* Status indicator */}
-          <div className="text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full">
-              <div
-                className={`w-2 h-2 rounded-full ${
-                  status === "listening"
-                    ? "bg-green-500 animate-pulse"
-                    : status === "processing"
-                      ? "bg-yellow-500 animate-pulse"
-                      : status === "speaking"
-                        ? "bg-blue-500 animate-pulse"
-                        : "bg-gray-400"
-                }`}
-              />
-              <span className="text-sm font-medium text-gray-700">
-                {status === "idle"
-                  ? "Ready"
-                  : status === "listening"
-                    ? "Listening..."
-                    : status === "processing"
-                      ? "Thinking..."
-                      : status === "speaking"
-                        ? "Speaking..."
-                        : "Ready"}
-              </span>
-            </div>
-          </div>
-
-          {/* Session duration */}
-          {status !== "idle" && (
-            <div className="text-center">
-              <p className="text-sm text-gray-600">Session: {formatTime(sessionDuration)}</p>
-              {transcript && <p className="text-xs text-gray-500 mt-2">{transcript}</p>}
-            </div>
-          )}
-
-          <div className="flex justify-center">
-            {status === "idle" ? (
-              <button
-                onClick={startSession}
-                className="w-20 h-20 rounded-full bg-green-500 hover:bg-green-600 active:bg-green-700 shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center"
-                aria-label="Start call"
-              >
-                <Phone className="w-8 h-8 text-white" />
-              </button>
-            ) : (
-              <button
-                onClick={stopSession}
-                className="w-20 h-20 rounded-full bg-red-500 hover:bg-red-600 active:bg-red-700 shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center"
-                aria-label="End call"
-              >
-                <PhoneOff className="w-8 h-8 text-white" />
-              </button>
-            )}
-          </div>
-
-          {/* Audio toggle */}
-          <div className="flex justify-center">
-            <Button variant="ghost" size="sm" onClick={toggleAudio} className="text-gray-600">
-              {isAudioEnabled ? <Volume2 className="w-5 h-5 mr-2" /> : <VolumeX className="w-5 h-5 mr-2" />}
-              {isAudioEnabled ? "Audio On" : "Audio Off"}
-            </Button>
-          </div>
-
-          {/* Error messages */}
-          {elevenLabsError && (
-            <div className="text-center p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-600">{elevenLabsError}</p>
-            </div>
-          )}
-        </div>
-      </div>
-
+      {/* Login button - top right corner */}
       <div className="absolute top-4 right-4 z-50">
         {isLoggedIn && user ? (
           <UserMenu
@@ -586,8 +586,12 @@ export default function VoiceTherapyChat() {
             onLogout={handleLogout}
           />
         ) : (
-          <Button variant="outline" onClick={() => setShowLoginModal(true)}>
-            Sign In
+          <Button
+            variant="outline"
+            onClick={() => setShowLoginModal(true)}
+            className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
+          >
+            Login / Register
           </Button>
         )}
       </div>
