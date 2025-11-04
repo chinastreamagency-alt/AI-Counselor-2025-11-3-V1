@@ -22,20 +22,15 @@ export function LoginModal({ isOpen, onClose, onLogin, message }: LoginModalProp
       setError(null)
 
       const result = await signIn("google", {
-        redirect: false,
         callbackUrl: "/",
       })
 
-      if (result?.error) {
-        setError("Failed to sign in with Google")
-        console.error("[v0] Google sign in error:", result.error)
-      } else if (result?.ok) {
+      if (result) {
         onClose()
       }
     } catch (err) {
       setError("An unexpected error occurred")
       console.error("[v0] Google login error:", err)
-    } finally {
       setIsLoading(false)
     }
   }
