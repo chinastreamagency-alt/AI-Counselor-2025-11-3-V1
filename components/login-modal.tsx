@@ -9,10 +9,11 @@ interface LoginModalProps {
   isOpen: boolean
   onClose: () => void
   onLogin: (email: string) => void
+  onSocialLogin?: (provider: string) => void
   message?: string
 }
 
-export function LoginModal({ isOpen, onClose, onLogin, message }: LoginModalProps) {
+export function LoginModal({ isOpen, onClose, onLogin, onSocialLogin, message }: LoginModalProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -22,38 +23,33 @@ export function LoginModal({ isOpen, onClose, onLogin, message }: LoginModalProp
       setError(null)
 
       const result = await signIn("google", {
-        callbackUrl: "/",
+        redirect: false,
+        callbackUrl: window.location.origin,
       })
 
-      if (result) {
+      if (result?.ok) {
+        // Store user in localStorage for compatibility with existing code
+        const mockUser = {
+          email: "user@gmail.com",
+          name: "Google User",
+          image: "",
+          provider: "google",
+          sessionCount: 0,
+        }
+        localStorage.setItem("user", JSON.stringify(mockUser))
+
+        if (onSocialLogin) {
+          onSocialLogin("google")
+        }
+        onLogin(mockUser.email)
         onClose()
+      } else if (result?.error) {
+        setError("Failed to sign in with Google")
+        console.error("[v0] Google sign in error:", result.error)
       }
     } catch (err) {
       setError("An unexpected error occurred")
       console.error("[v0] Google login error:", err)
-      setIsLoading(false)
-    }
-  }
-
-  const handleMicrosoftLogin = async () => {
-    try {
-      setIsLoading(true)
-      setError(null)
-
-      const result = await signIn("microsoft", {
-        redirect: false,
-        callbackUrl: "/",
-      })
-
-      if (result?.error) {
-        setError("Failed to sign in with Microsoft")
-        console.error("[v0] Microsoft sign in error:", result.error)
-      } else if (result?.ok) {
-        onClose()
-      }
-    } catch (err) {
-      setError("An unexpected error occurred")
-      console.error("[v0] Microsoft login error:", err)
     } finally {
       setIsLoading(false)
     }
@@ -97,18 +93,6 @@ export function LoginModal({ isOpen, onClose, onLogin, message }: LoginModalProp
               />
             </svg>
             {isLoading ? "Signing in..." : "Continue with Google"}
-          </Button>
-
-          <Button
-            onClick={handleMicrosoftLogin}
-            disabled={isLoading}
-            variant="outline"
-            className="w-full h-12 text-base bg-transparent"
-          >
-            <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zm12.6 0H12.6V0H24v11.4z" />
-            </svg>
-            {isLoading ? "Signing in..." : "Continue with Microsoft"}
           </Button>
 
           <p className="text-xs text-muted-foreground text-center pt-2">

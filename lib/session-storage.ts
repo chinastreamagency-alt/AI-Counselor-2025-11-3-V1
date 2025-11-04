@@ -7,7 +7,7 @@ export type TherapySession = {
     content: string
     timestamp: Date
   }>
-  duration?: number // in seconds
+  duration?: number
   userId?: string
 }
 
@@ -29,7 +29,6 @@ export function saveSession(session: TherapySession): void {
 
     const sevenDaysAgo = new Date()
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - RETENTION_DAYS)
-
     const recentSessions = sessions.filter((s) => new Date(s.startTime).getTime() > sevenDaysAgo.getTime())
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(recentSessions))
@@ -89,9 +88,7 @@ export function clearAllSessions(): void {
 export function getLastIncompleteSession(userId: string): TherapySession | undefined {
   const sessions = getSessions()
   const userSessions = sessions.filter((s) => s.userId === userId)
-
   const sortedSessions = userSessions.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
-
   return sortedSessions[0]
 }
 

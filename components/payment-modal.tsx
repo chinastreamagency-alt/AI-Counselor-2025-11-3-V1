@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation"
 interface PaymentModalProps {
   isOpen: boolean
   onClose: () => void
-  onSuccess: (hours: number) => void
+  onSuccess?: (hours: number) => void
   userEmail?: string
 }
 
@@ -50,36 +50,32 @@ export function PaymentModal({ isOpen, onClose, onSuccess, userEmail }: PaymentM
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-center">Service Time Low</DialogTitle>
-          <p className="text-center text-sm text-gray-600 dark:text-gray-400 pt-2">
+          <div className="flex items-center gap-2 text-amber-600">
+            <Clock className="h-5 w-5" />
+            <DialogTitle>Service Time Low</DialogTitle>
+          </div>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
             {userEmail
               ? "Your service time is running low. Purchase more time to continue."
               : "Please log in and purchase time to continue your counseling session."}
           </p>
-        </DialogHeader>
 
-        <div className="py-6 space-y-4">
-          <div className="bg-gradient-to-br from-violet-50 to-cyan-50 dark:from-violet-950 dark:to-cyan-950 rounded-xl p-6 text-center border-2 border-violet-200 dark:border-violet-800">
-            <Clock className="w-12 h-12 text-violet-600 mx-auto mb-3" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Choose Your Package</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Select from 1, 5, 10, or 100 hours of counseling time
-            </p>
-            <Button
-              onClick={handleNavigateToPayment}
-              className="w-full bg-gradient-to-r from-violet-500 to-cyan-500 hover:from-violet-600 hover:to-cyan-600 text-white font-semibold py-6 text-lg"
-            >
+          <div className="bg-gradient-to-br from-purple-50 to-blue-50 p-4 rounded-lg">
+            <h3 className="font-semibold mb-2">Choose Your Package</h3>
+            <p className="text-sm text-muted-foreground mb-3">Select from 1, 5, 10, or 100 hours of counseling time</p>
+            <Button onClick={handleNavigateToPayment} className="w-full">
               View Pricing Options
-              <ArrowRight className="w-5 h-5 ml-2" />
+              <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
 
-          <div className="space-y-2 pt-2">
-            <p className="text-xs text-center text-gray-600 dark:text-gray-400">
-              ✓ Time automatically syncs to your account
-            </p>
-            <p className="text-xs text-center text-gray-600 dark:text-gray-400">✓ Never expires</p>
-            <p className="text-xs text-center text-gray-600 dark:text-gray-400">✓ Secure payment</p>
+          <div className="text-xs text-muted-foreground space-y-1">
+            <p>✓ Time automatically syncs to your account</p>
+            <p>✓ Never expires</p>
+            <p>✓ Secure payment</p>
           </div>
         </div>
       </DialogContent>
