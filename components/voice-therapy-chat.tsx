@@ -458,8 +458,9 @@ export default function VoiceTherapyChat() {
       if (user) {
         const profile = loadUserProfile(user.email)
         const newUsedMinutes = (profile?.usedMinutes || 0) + Math.ceil(sessionDuration / 60)
-        saveUserProfile(user.email, {
+        saveUserProfile({
           ...profile,
+          userId: user.email,
           usedMinutes: newUsedMinutes,
           sessionCount: (profile?.sessionCount || 0) + 1,
         })
@@ -571,23 +572,31 @@ export default function VoiceTherapyChat() {
           </div>
         )}
 
-        {/* Call button - centered like phone interface */}
+        {/* Call button - centered like phone interface with futuristic design */}
         <div className="flex justify-center mb-6">
           {status === "idle" ? (
             <button
               onClick={startSession}
-              className="w-20 h-20 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 hover:from-cyan-500 hover:to-blue-600 shadow-2xl hover:shadow-cyan-500/50 transition-all duration-300 flex items-center justify-center group"
+              className="relative w-24 h-24 rounded-full bg-gradient-to-br from-cyan-500 via-blue-500 to-purple-600 hover:from-cyan-400 hover:via-blue-400 hover:to-purple-500 shadow-2xl hover:shadow-cyan-400/60 transition-all duration-300 flex items-center justify-center group overflow-hidden"
+              style={{
+                boxShadow: '0 0 40px rgba(6, 182, 212, 0.5), 0 0 60px rgba(59, 130, 246, 0.3), inset 0 -5px 15px rgba(0, 0, 0, 0.2)'
+              }}
               aria-label="Start Conversation"
             >
-              <Phone className="w-8 h-8 text-white group-hover:scale-110 transition-transform" />
+              <div className="absolute inset-0 bg-gradient-to-t from-white/0 via-white/10 to-white/20 rounded-full"></div>
+              <Phone className="w-10 h-10 text-white group-hover:scale-125 transition-transform drop-shadow-[0_2px_8px_rgba(255,255,255,0.8)]" />
             </button>
           ) : (
             <button
               onClick={stopSession}
-              className="w-20 h-20 rounded-full bg-red-500 hover:bg-red-600 shadow-2xl hover:shadow-red-500/50 transition-all duration-300 flex items-center justify-center group"
+              className="relative w-24 h-24 rounded-full bg-gradient-to-br from-red-500 via-pink-500 to-red-600 hover:from-red-400 hover:via-pink-400 hover:to-red-500 shadow-2xl hover:shadow-red-400/60 transition-all duration-300 flex items-center justify-center group overflow-hidden"
+              style={{
+                boxShadow: '0 0 40px rgba(239, 68, 68, 0.5), 0 0 60px rgba(236, 72, 153, 0.3), inset 0 -5px 15px rgba(0, 0, 0, 0.2)'
+              }}
               aria-label="End call"
             >
-              <PhoneOff className="w-8 h-8 text-white group-hover:scale-110 transition-transform" />
+              <div className="absolute inset-0 bg-gradient-to-t from-white/0 via-white/10 to-white/20 rounded-full"></div>
+              <PhoneOff className="w-10 h-10 text-white group-hover:scale-125 transition-transform drop-shadow-[0_2px_8px_rgba(255,255,255,0.8)]" />
             </button>
           )}
         </div>

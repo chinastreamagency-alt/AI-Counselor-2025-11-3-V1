@@ -50,42 +50,11 @@ export function LoginModal({ isOpen, onClose, onLogin, onSocialLogin, message }:
             </div>
           )}
 
-          {/* 临时演示登录按钮 */}
-          <Button
-            onClick={() => {
-              const testUser = {
-                email: "demo@example.com",
-                name: "演示用户",
-                image: "",
-                provider: "demo",
-                sessionCount: 0,
-              }
-              localStorage.setItem("user", JSON.stringify(testUser))
-              onLogin(testUser.email)
-              onClose()
-            }}
-            className="w-full h-12 bg-green-600 hover:bg-green-700 text-white text-base"
-          >
-            <svg className="mr-2 h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-            </svg>
-            演示登录 (体验界面效果)
-          </Button>
-
-          <div className="relative my-2">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">或</span>
-            </div>
-          </div>
-
           <Button
             onClick={handleGoogleLogin}
             disabled={isLoading}
             variant="outline"
-            className="w-full h-12 text-base bg-transparent"
+            className="w-full h-12 text-base bg-white hover:bg-gray-50 border-2"
           >
             <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
               <path

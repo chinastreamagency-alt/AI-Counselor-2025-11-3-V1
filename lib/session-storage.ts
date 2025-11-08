@@ -9,6 +9,7 @@ export type TherapySession = {
   }>
   duration?: number
   userId?: string
+  userEmail?: string
 }
 
 const STORAGE_KEY = "therapy_sessions"
