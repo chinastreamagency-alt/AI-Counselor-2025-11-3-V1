@@ -519,19 +519,18 @@ export default function VoiceTherapyChat() {
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900 flex items-center justify-center p-4">
       {/* Video Avatar - centered and large */}
-      <div className="w-full max-w-2xl">
-        <div className="relative mb-8">
-          <VideoAvatar
-            isListening={status === "listening"}
-            isSpeaking={status === "speaking"}
-            currentSpeaker={currentSpeaker}
-            currentText={currentText}
-          />
-        </div>
-
-        {/* Status indicator */}
-        <div className="text-center mb-6">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full">
+      <div className="relative w-full max-w-2xl">
+        <VideoAvatar
+          isListening={status === "listening"}
+          isSpeaking={status === "speaking"}
+          currentSpeaker={currentSpeaker}
+          currentText={currentText}
+        />
+        
+        {/* Control panel overlay - positioned at bottom center of video */}
+        <div className="absolute bottom-8 left-0 right-0 flex flex-col items-center gap-4 px-4">
+          {/* Status indicator */}
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-900/80 backdrop-blur-md rounded-full border border-white/20">
             <div
               className={`w-2 h-2 rounded-full ${
                 status === "listening"
@@ -555,25 +554,26 @@ export default function VoiceTherapyChat() {
                       : "Ready"}
             </span>
           </div>
-        </div>
 
-        {/* Free trial timer */}
-        {!isLoggedIn && freeTrialActive && (
-          <div className="text-center mb-4">
-            <p className="text-sm text-white/80 font-medium">Free trial: {formatTime(freeTrialTimeLeft)}</p>
-          </div>
-        )}
+          {/* Free trial timer */}
+          {!isLoggedIn && freeTrialActive && (
+            <p className="text-sm text-white/90 font-medium bg-purple-900/60 backdrop-blur-sm px-4 py-2 rounded-full">
+              Free trial: {formatTime(freeTrialTimeLeft)}
+            </p>
+          )}
 
-        {/* Session duration */}
-        {status !== "idle" && (
-          <div className="text-center mb-4">
-            <p className="text-sm text-white/70">Session: {formatTime(sessionDuration)}</p>
-            {transcript && <p className="text-xs text-white/50 mt-2">{transcript}</p>}
-          </div>
-        )}
+          {/* Session duration */}
+          {status !== "idle" && (
+            <div className="text-center">
+              <p className="text-sm text-white/90 bg-purple-900/60 backdrop-blur-sm px-4 py-2 rounded-full inline-block">
+                Session: {formatTime(sessionDuration)}
+              </p>
+              {transcript && <p className="text-xs text-white/70 mt-2">{transcript}</p>}
+            </div>
+          )}
 
-        {/* Call button - centered like phone interface with futuristic design */}
-        <div className="flex justify-center mb-6">
+          {/* Call button - centered like phone interface with futuristic design */}
+          <div className="flex justify-center">
           {status === "idle" ? (
             <button
               onClick={startSession}
@@ -599,15 +599,14 @@ export default function VoiceTherapyChat() {
               <PhoneOff className="w-10 h-10 text-white group-hover:scale-125 transition-transform drop-shadow-[0_2px_8px_rgba(255,255,255,0.8)]" />
             </button>
           )}
-        </div>
+          </div>
 
-        {/* Audio toggle */}
-        <div className="flex justify-center">
+          {/* Audio toggle */}
           <Button
             variant="ghost"
             size="sm"
             onClick={toggleAudio}
-            className="text-white/80 hover:text-white hover:bg-white/10"
+            className="text-white/90 hover:text-white hover:bg-purple-800/50 backdrop-blur-sm"
           >
             {isAudioEnabled ? <Volume2 className="w-5 h-5 mr-2" /> : <VolumeX className="w-5 h-5 mr-2" />}
             {isAudioEnabled ? "Audio On" : "Audio Off"}
@@ -616,8 +615,8 @@ export default function VoiceTherapyChat() {
 
         {/* Error messages */}
         {elevenLabsError && (
-          <div className="text-center mt-4 p-4 bg-red-500/20 backdrop-blur-sm border border-red-400/30 rounded-lg">
-            <p className="text-sm text-red-200">{elevenLabsError}</p>
+          <div className="absolute top-4 left-4 right-4 p-4 bg-red-500/90 backdrop-blur-sm border border-red-400/50 rounded-lg">
+            <p className="text-sm text-white text-center">{elevenLabsError}</p>
           </div>
         )}
       </div>

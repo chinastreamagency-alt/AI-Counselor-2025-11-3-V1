@@ -1,9 +1,10 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { ArrowLeft, Clock, User, Calendar } from "lucide-react"
+import { ArrowLeft, Clock, User, Calendar, CreditCard } from "lucide-react"
 import { getSessions } from "@/lib/session-storage"
 
 type UserAccountPageProps = {
@@ -18,6 +19,7 @@ type UserAccountPageProps = {
 }
 
 export function UserAccountPage({ user, purchasedHours, usedMinutes, onClose }: UserAccountPageProps) {
+  const router = useRouter()
   const [sessionHistory, setSessionHistory] = useState<any[]>([])
 
   useEffect(() => {
@@ -32,6 +34,10 @@ export function UserAccountPage({ user, purchasedHours, usedMinutes, onClose }: 
   const remainingMinutes = purchasedHours * 60 - usedMinutes
   const remainingHours = Math.floor(remainingMinutes / 60)
   const remainingMins = remainingMinutes % 60
+
+  const handlePurchase = () => {
+    router.push('/payment')
+  }
 
   return (
     <div className="fixed inset-0 bg-background z-50 overflow-y-auto">
@@ -60,9 +66,19 @@ export function UserAccountPage({ user, purchasedHours, usedMinutes, onClose }: 
         </Card>
 
         <Card className="p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Clock className="h-5 w-5 text-primary" />
-            <h3 className="font-semibold">Available Consultation Time</h3>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-primary" />
+              <h3 className="font-semibold">Available Consultation Time</h3>
+            </div>
+            <Button 
+              onClick={handlePurchase}
+              size="sm"
+              className="bg-gradient-to-r from-violet-500 to-cyan-500 hover:from-violet-600 hover:to-cyan-600"
+            >
+              <CreditCard className="h-4 w-4 mr-2" />
+              Recharge
+            </Button>
           </div>
           <div className="text-3xl font-bold text-primary">
             {remainingHours}h {remainingMins}m
