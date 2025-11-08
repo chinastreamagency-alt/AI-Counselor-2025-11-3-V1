@@ -1,69 +1,69 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { stripe } from "@/lib/stripe"
 import { getProductById } from "@/lib/products"
-import { createClient } from "@/lib/supabase/server"
+import { cookies } from "next/headers"
 
 export async function POST(request: NextRequest) {
   try {
     const { productId, affiliateCode } = await request.json()
 
-    console.log("[v0] Creating checkout session for product:", productId)
+    console.log("[Stripe] Creating checkout session for product:", productId)
 
     // Get product details
     const product = getProductById(productId)
     if (!product) {
-      console.error("[v0] Product not found:", productId)
+      console.error("[Stripe] Product not found:", productId)
       return NextResponse.json({ error: "Product not found" }, { status: 404 })
     }
 
-    console.log("[v0] Product found:", product)
+    console.log("[Stripe] Product found:", product)
 
-    // Get user from Supabase auth
-    const supabase = await createClient()
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    if (authError) {
-      console.error("[v0] Auth error:", authError)
-      return NextResponse.json({ error: "Authentication failed" }, { status: 401 })
+    // Get user from custom session (Google OAuth)
+    const cookieStore = await cookies()
+    const sessionCookie = cookieStore.get('custom_session')
+    
+    if (!sessionCookie) {
+      console.error("[Stripe] No session cookie found")
+      return NextResponse.json({ error: "Unauthorized - Please log in" }, { status: 401 })
     }
 
-    if (!user) {
-      console.error("[v0] No user found")
+    let user
+    try {
+      const session = JSON.parse(sessionCookie.value)
+      
+      // Check if session is expired
+      if (new Date(session.expires) < new Date()) {
+        console.error("[Stripe] Session expired")
+        return NextResponse.json({ error: "Session expired - Please log in again" }, { status: 401 })
+      }
+      
+      user = session.user
+    } catch (parseError) {
+      console.error("[Stripe] Error parsing session:", parseError)
+      return NextResponse.json({ error: "Invalid session" }, { status: 401 })
+    }
+
+    if (!user || !user.email) {
+      console.error("[Stripe] No user found in session")
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    console.log("[v0] User authenticated:", user.email)
+    console.log("[Stripe] User authenticated:", user.email)
 
-    // Look up affiliate if code provided
+    // Affiliate code (simplified for now - can be enhanced later)
     let affiliateId: string | undefined
     if (affiliateCode) {
-      const { data: affiliate, error: affiliateError } = await supabase
-        .from("affiliates")
-        .select("id")
-        .eq("referral_code", affiliateCode)
-        .eq("status", "active")
-        .single()
-
-      if (affiliateError) {
-        console.log("[v0] Affiliate lookup error (non-critical):", affiliateError.message)
-      }
-
-      if (affiliate) {
-        affiliateId = affiliate.id
-        console.log("[v0] Affiliate found:", affiliateId)
-      }
+      affiliateId = affiliateCode
+      console.log("[Stripe] Affiliate code provided:", affiliateId)
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin
     const successUrl = `${baseUrl}/purchase-success?session_id={CHECKOUT_SESSION_ID}`
     const cancelUrl = `${baseUrl}/payment?canceled=true`
 
-    console.log("[v0] Base URL:", baseUrl)
-    console.log("[v0] Success URL:", successUrl)
-    console.log("[v0] Cancel URL:", cancelUrl)
+    console.log("[Stripe] Base URL:", baseUrl)
+    console.log("[Stripe] Success URL:", successUrl)
+    console.log("[Stripe] Cancel URL:", cancelUrl)
 
     try {
       const session = await stripe.checkout.sessions.create({
@@ -86,19 +86,20 @@ export async function POST(request: NextRequest) {
         cancel_url: cancelUrl,
         customer_email: user.email,
         metadata: {
-          userId: user.id,
+          userEmail: user.email,
+          userName: user.name || "",
           productId: product.id,
           hours: product.hours.toString(),
           affiliateId: affiliateId || "",
         },
       })
 
-      console.log("[v0] Checkout session created successfully:", session.id)
-      console.log("[v0] Checkout URL:", session.url)
+      console.log("[Stripe] Checkout session created successfully:", session.id)
+      console.log("[Stripe] Checkout URL:", session.url)
 
       return NextResponse.json({ sessionId: session.id, url: session.url })
     } catch (stripeError: any) {
-      console.error("[v0] Stripe API error:", {
+      console.error("[Stripe] Stripe API error:", {
         message: stripeError.message,
         type: stripeError.type,
         code: stripeError.code,
@@ -114,7 +115,7 @@ export async function POST(request: NextRequest) {
       )
     }
   } catch (error: any) {
-    console.error("[v0] Error creating checkout session:", {
+    console.error("[Stripe] Error creating checkout session:", {
       message: error.message,
       stack: error.stack,
       name: error.name,
