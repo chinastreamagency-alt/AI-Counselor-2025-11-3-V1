@@ -29,20 +29,39 @@ export function VideoAvatar({ isListening, isSpeaking, currentSpeaker, currentTe
   const status = getStatus()
 
   return (
-    <div className="relative w-full max-w-2xl aspect-video rounded-2xl overflow-hidden shadow-2xl bg-gradient-to-br from-purple-100 to-blue-100">
+    <div className="relative w-full h-full
+      sm:w-full sm:h-screen sm:rounded-none sm:shadow-none
+      md:max-w-4xl md:aspect-video md:rounded-3xl md:shadow-3xl md:transform md:perspective-1000 md:rotate-y-2 md:hover:rotate-y-0 md:transition-all md:duration-500 md:hover:scale-105 md:float-animation md:breathing-glow
+      lg:max-w-5xl lg:shadow-4xl lg:hover:shadow-4xl
+      xl:max-w-6xl
+      overflow-hidden bg-gradient-to-br from-slate-50 to-gray-100">
+      
+      {/* 3D 高级反光效果层 - 仅桌面显示 */}
+      <div className="absolute inset-0 premium-gradient pointer-events-none hidden md:block"></div>
+      
+      {/* 玻璃态效果层 - 仅桌面显示 */}
+      <div className="absolute inset-0 glass-effect pointer-events-none hidden md:block opacity-30"></div>
+      
+      {/* 视频层 */}
       <video
         ref={videoRef}
-        className="w-full h-full object-cover"
+        className="w-full h-full object-cover relative z-10"
         loop
         muted
         playsInline
-        poster="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=800&h=450&fit=crop"
+        poster="/ai-counselor-background.mp4"
       >
         <source
-          src="https://assets.mixkit.co/videos/preview/mixkit-woman-smiling-at-camera-1759-large.mp4"
+          src="/ai-counselor-background.mp4"
           type="video/mp4"
         />
       </video>
+      
+      {/* 3D 高级边框效果 - 仅桌面显示 */}
+      <div className="absolute inset-0 border-2 border-white/40 rounded-3xl pointer-events-none hidden md:block shadow-inner"></div>
+      
+      {/* 环境光效果 - 仅桌面显示 */}
+      <div className="absolute -inset-4 bg-gradient-radial from-blue-200/20 via-purple-200/10 to-transparent rounded-full blur-xl pointer-events-none hidden lg:block animate-pulse"></div>
 
       {/* Status overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />

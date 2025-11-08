@@ -1,0 +1,20 @@
+清理项目并准备部署到 Vercel
+
+主要更改：
+- 删除所有临时测试脚本和调试文件
+- 删除 40+ 个临时 Markdown 文档
+- 删除调试用的 API 路由（check-env, debug-auth, test-env 等）
+- 删除测试页面（/test-login, /test-google-direct）
+- 保留核心功能和部署文档
+- 添加完整的 Vercel 部署指南
+
+Google 登录功能：
+- 使用自定义 OAuth 流程
+- 配置完整且经过测试
+- 在生产环境中可正常工作
+
+下一步：
+- 部署到 Vercel
+- 配置环境变量
+- 更新 Google Cloud Console
+

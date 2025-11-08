@@ -22,35 +22,13 @@ export function LoginModal({ isOpen, onClose, onLogin, onSocialLogin, message }:
       setIsLoading(true)
       setError(null)
 
-      const result = await signIn("google", {
-        redirect: false,
-        callbackUrl: window.location.origin,
-      })
-
-      if (result?.ok) {
-        // Store user in localStorage for compatibility with existing code
-        const mockUser = {
-          email: "user@gmail.com",
-          name: "Google User",
-          image: "",
-          provider: "google",
-          sessionCount: 0,
-        }
-        localStorage.setItem("user", JSON.stringify(mockUser))
-
-        if (onSocialLogin) {
-          onSocialLogin("google")
-        }
-        onLogin(mockUser.email)
-        onClose()
-      } else if (result?.error) {
-        setError("Failed to sign in with Google")
-        console.error("[v0] Google sign in error:", result.error)
-      }
+      console.log("[Google Login] Starting login process...")
+      
+      // 使用完全自定义的 OAuth 流程
+      window.location.href = "/api/auth/custom-google/login"
     } catch (err) {
-      setError("An unexpected error occurred")
-      console.error("[v0] Google login error:", err)
-    } finally {
+      setError("网络错误，请检查连接后重试")
+      console.error("[Google Login Exception]", err)
       setIsLoading(false)
     }
   }
@@ -66,7 +44,42 @@ export function LoginModal({ isOpen, onClose, onLogin, onSocialLogin, message }:
         </DialogHeader>
 
         <div className="flex flex-col gap-4 py-4">
-          {error && <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md">{error}</div>}
+          {error && (
+            <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md whitespace-pre-line">
+              {error}
+            </div>
+          )}
+
+          {/* 临时演示登录按钮 */}
+          <Button
+            onClick={() => {
+              const testUser = {
+                email: "demo@example.com",
+                name: "演示用户",
+                image: "",
+                provider: "demo",
+                sessionCount: 0,
+              }
+              localStorage.setItem("user", JSON.stringify(testUser))
+              onLogin(testUser.email)
+              onClose()
+            }}
+            className="w-full h-12 bg-green-600 hover:bg-green-700 text-white text-base"
+          >
+            <svg className="mr-2 h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            演示登录 (体验界面效果)
+          </Button>
+
+          <div className="relative my-2">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">或</span>
+            </div>
+          </div>
 
           <Button
             onClick={handleGoogleLogin}
@@ -92,7 +105,7 @@ export function LoginModal({ isOpen, onClose, onLogin, onSocialLogin, message }:
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
               />
             </svg>
-            {isLoading ? "Signing in..." : "Continue with Google"}
+            {isLoading ? "正在登录..." : "使用 Google 账号登录"}
           </Button>
 
           <p className="text-xs text-muted-foreground text-center pt-2">

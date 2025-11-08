@@ -123,3 +123,100 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* 3D效果和动画增强 */
+@layer utilities {
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+  
+  .rotate-y-2 {
+    transform: rotateY(2deg);
+  }
+  
+  .hover\:rotate-y-0:hover {
+    transform: rotateY(0deg);
+  }
+  
+  .shadow-3xl {
+    box-shadow: 0 35px 60px -12px rgba(0, 0, 0, 0.25);
+  }
+  
+  .shadow-4xl {
+    box-shadow: 0 45px 80px -15px rgba(0, 0, 0, 0.3);
+  }
+  
+  /* 玻璃态效果 */
+  .glass-effect {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+  
+  /* 高级渐变背景 */
+  .premium-gradient {
+    background: linear-gradient(135deg, 
+      rgba(255, 255, 255, 0.1) 0%, 
+      rgba(255, 255, 255, 0.05) 50%, 
+      rgba(0, 0, 0, 0.05) 100%);
+  }
+  
+  /* 3D 按钮效果 */
+  .btn-3d {
+    transform-style: preserve-3d;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .btn-3d:hover {
+    transform: translateY(-2px) translateZ(10px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  }
+  
+  /* 呼吸光效 */
+  .breathing-glow {
+    animation: breathingGlow 3s ease-in-out infinite;
+  }
+  
+  @keyframes breathingGlow {
+    0%, 100% {
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+    }
+    50% {
+      box-shadow: 0 0 30px rgba(59, 130, 246, 0.6);
+    }
+  }
+  
+  /* 悬浮动画 */
+  .float-animation {
+    animation: float 6s ease-in-out infinite;
+  }
+  
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px) rotateY(2deg);
+    }
+    50% {
+      transform: translateY(-10px) rotateY(2deg);
+    }
+  }
+}
+
+/* 响应式字体大小 */
+@media (max-width: 640px) {
+  html {
+    font-size: 14px;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  html {
+    font-size: 15px;
+  }
+}
+
+@media (min-width: 1025px) {
+  html {
+    font-size: 16px;
+  }
+}

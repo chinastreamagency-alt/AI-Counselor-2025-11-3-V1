@@ -1,0 +1,33 @@
+# 环境变量文件
+.env.local
+.env*.local
+
+# 日志文件
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+server-log.txt
+
+# 临时文件
+*.md
+!README.md
+
+# 测试文件
+test-*.js
+test-*.html
+check-*.js
+verify-*.js
+update-env*.ps1
+
+# Node modules
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# 其他
+.DS_Store
+*.pem
+
