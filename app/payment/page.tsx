@@ -64,10 +64,21 @@ export default function PaymentPage() {
   }, [])
 
   const handlePurchase = async (productId: string) => {
-    console.log("[v0] User clicked purchase button for:", productId)
+    console.log("[Payment] User clicked purchase button for:", productId)
     setUserEmail(productId)
 
     try {
+      // 检查用户是否登录
+      const storedUser = localStorage.getItem("user")
+      if (!storedUser) {
+        console.error("[Payment] User not logged in")
+        alert("Please log in first before making a purchase.")
+        setUserEmail(null)
+        return
+      }
+
+      console.log("[Payment] User is logged in, creating checkout session...")
+
       // Create checkout session
       const response = await fetch("/api/create-checkout-session", {
         method: "POST",
@@ -78,63 +89,75 @@ export default function PaymentPage() {
         }),
       })
 
+      console.log("[Payment] Response status:", response.status)
+
       if (!response.ok) {
-        throw new Error("Failed to create checkout session")
+        const errorData = await response.json()
+        console.error("[Payment] Server error:", errorData)
+        throw new Error(errorData.error || errorData.details || "Failed to create checkout session")
       }
 
-      const { url } = await response.json()
-      console.log("[v0] Redirecting to Stripe Checkout:", url)
+      const data = await response.json()
+      console.log("[Payment] Received data:", data)
+
+      if (!data.url) {
+        console.error("[Payment] No checkout URL received")
+        throw new Error("No checkout URL received from server")
+      }
+
+      console.log("[Payment] Redirecting to Stripe Checkout:", data.url)
 
       // Redirect to Stripe Checkout
-      window.location.href = url
-    } catch (error) {
-      console.error("[v0] Error creating checkout session:", error)
-      alert("Failed to start checkout. Please try again.")
+      window.location.href = data.url
+    } catch (error: any) {
+      console.error("[Payment] Error creating checkout session:", error)
+      console.error("[Payment] Error details:", error.message)
+      alert(`Failed to start checkout: ${error.message}\n\nPlease check the console for details.`)
       setUserEmail(null)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-100 to-purple-50 flex items-center justify-center p-4">
       <div className="w-full max-w-4xl">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">Choose Your Plan</h1>
-          <p className="text-white/70">Select the perfect plan for your counseling needs</p>
+          <h1 className="text-4xl font-bold text-indigo-900 mb-2">Choose Your Plan</h1>
+          <p className="text-slate-600 text-lg">Select the perfect plan for your counseling needs</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {PRODUCTS.map((product) => (
             <Card
               key={product.id}
-              className="bg-white/10 backdrop-blur-md border-white/20 hover:bg-white/15 transition-all"
+              className="bg-white/80 backdrop-blur-md border-indigo-200 hover:shadow-xl hover:border-indigo-300 transition-all shadow-lg shadow-indigo-100/50"
             >
               <CardHeader>
-                <CardTitle className="text-2xl text-white">{product.name}</CardTitle>
-                <CardDescription className="text-white/70">{product.description}</CardDescription>
+                <CardTitle className="text-2xl text-indigo-900">{product.name}</CardTitle>
+                <CardDescription className="text-slate-600">{product.description}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="mb-6">
-                  <div className="text-4xl font-bold text-white mb-2">${(product.priceInCents / 100).toFixed(2)}</div>
-                  <div className="text-white/70">
+                  <div className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 mb-2">${(product.priceInCents / 100).toFixed(2)}</div>
+                  <div className="text-slate-600 font-medium">
                     ${(product.priceInCents / 100 / product.hours).toFixed(2)} per hour
                   </div>
                 </div>
 
                 <ul className="space-y-2 mb-6">
-                  <li className="flex items-center text-white/90">
-                    <Check className="w-5 h-5 mr-2 text-green-400" />
+                  <li className="flex items-center text-slate-700">
+                    <Check className="w-5 h-5 mr-2 text-green-500" />
                     {product.hours} hour{product.hours > 1 ? "s" : ""} of service
                   </li>
-                  <li className="flex items-center text-white/90">
-                    <Check className="w-5 h-5 mr-2 text-green-400" />
+                  <li className="flex items-center text-slate-700">
+                    <Check className="w-5 h-5 mr-2 text-green-500" />
                     24/7 AI counselor access
                   </li>
-                  <li className="flex items-center text-white/90">
-                    <Check className="w-5 h-5 mr-2 text-green-400" />
+                  <li className="flex items-center text-slate-700">
+                    <Check className="w-5 h-5 mr-2 text-green-500" />
                     Voice & text support
                   </li>
-                  <li className="flex items-center text-white/90">
-                    <Check className="w-5 h-5 mr-2 text-green-400" />
+                  <li className="flex items-center text-slate-700">
+                    <Check className="w-5 h-5 mr-2 text-green-500" />
                     Session memory
                   </li>
                 </ul>
@@ -142,7 +165,7 @@ export default function PaymentPage() {
                 <Button
                   onClick={() => handlePurchase(product.id)}
                   disabled={userEmail === product.id}
-                  className="w-full bg-gradient-to-r from-violet-500 to-cyan-500 hover:from-violet-600 hover:to-cyan-600 text-white font-semibold py-6 text-lg"
+                  className="w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 text-white font-semibold py-6 text-lg shadow-lg shadow-indigo-300/50"
                 >
                   {userEmail === product.id ? (
                     "Processing..."
@@ -159,31 +182,31 @@ export default function PaymentPage() {
         </div>
 
         {/* 支付方式说明 */}
-        <div className="mt-8 bg-white/10 backdrop-blur-md border-white/20 rounded-lg p-6">
-          <h3 className="text-xl font-bold text-white mb-4">💳 Multiple Payment Methods Supported</h3>
+        <div className="mt-8 bg-white/80 backdrop-blur-md border-indigo-200 rounded-xl p-6 shadow-xl shadow-indigo-100/50">
+          <h3 className="text-xl font-bold text-indigo-900 mb-4">💳 Multiple Payment Methods Supported</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white/5 rounded-lg p-3 text-center">
-              <p className="text-white/90 font-medium">Credit Card</p>
-              <p className="text-white/60 text-xs">Visa, Mastercard, Amex</p>
+            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg p-3 text-center border border-indigo-200">
+              <p className="text-indigo-900 font-medium">Credit Card</p>
+              <p className="text-slate-600 text-xs">Visa, Mastercard, Amex</p>
             </div>
-            <div className="bg-white/5 rounded-lg p-3 text-center">
-              <p className="text-white/90 font-medium">PayPal</p>
-              <p className="text-white/60 text-xs">Fast & Secure</p>
+            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg p-3 text-center border border-indigo-200">
+              <p className="text-indigo-900 font-medium">PayPal</p>
+              <p className="text-slate-600 text-xs">Fast & Secure</p>
             </div>
-            <div className="bg-white/5 rounded-lg p-3 text-center">
-              <p className="text-white/90 font-medium">WeChat Pay</p>
-              <p className="text-white/60 text-xs">微信支付</p>
+            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg p-3 text-center border border-indigo-200">
+              <p className="text-indigo-900 font-medium">WeChat Pay</p>
+              <p className="text-slate-600 text-xs">微信支付</p>
             </div>
-            <div className="bg-white/5 rounded-lg p-3 text-center">
-              <p className="text-white/90 font-medium">Alipay</p>
-              <p className="text-white/60 text-xs">支付宝</p>
+            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg p-3 text-center border border-indigo-200">
+              <p className="text-indigo-900 font-medium">Alipay</p>
+              <p className="text-slate-600 text-xs">支付宝</p>
             </div>
           </div>
           
           {/* 服务条款 */}
-          <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 mb-4">
-            <h4 className="text-amber-300 font-semibold mb-2">⚠️ Refund Policy - Please Read Carefully</h4>
-            <ul className="text-white/80 text-sm space-y-1">
+          <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 mb-4">
+            <h4 className="text-amber-700 font-semibold mb-2">⚠️ Refund Policy - Please Read Carefully</h4>
+            <ul className="text-slate-700 text-sm space-y-1">
               <li>• All purchases are <strong>FINAL and NON-REFUNDABLE</strong></li>
               <li>• Once time is added to your account, it <strong>cannot be refunded</strong></li>
               <li>• Purchased time does not expire</li>
@@ -191,15 +214,15 @@ export default function PaymentPage() {
             </ul>
           </div>
 
-          <p className="text-white/60 text-xs text-center">
+          <p className="text-slate-500 text-xs text-center">
             Secure payment powered by Stripe • Your card information is encrypted and never stored on our servers
           </p>
         </div>
 
         {affiliateCode && (
           <div className="mt-6 text-center">
-            <p className="text-white/70 text-sm">
-              Referred by: <span className="text-white font-semibold">{affiliateCode}</span>
+            <p className="text-slate-600 text-sm">
+              Referred by: <span className="text-indigo-700 font-semibold">{affiliateCode}</span>
             </p>
           </div>
         )}

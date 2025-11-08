@@ -517,7 +517,7 @@ export default function VoiceTherapyChat() {
   }
 
   return (
-    <div className="relative h-screen overflow-hidden bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 flex items-center justify-center p-4">
+    <div className="relative h-screen overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-100 to-purple-50 flex items-center justify-center p-4">
       {/* Video Avatar - centered and large */}
       <div className="relative w-full max-w-2xl">
         <VideoAvatar
@@ -527,10 +527,10 @@ export default function VoiceTherapyChat() {
           currentText={currentText}
         />
         
-        {/* Control panel overlay - positioned at bottom center of video */}
-        <div className="absolute bottom-8 left-0 right-0 flex flex-col items-center gap-4 px-4">
-          {/* Status indicator */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-900/80 backdrop-blur-md rounded-full border border-white/20">
+               {/* Control panel overlay - positioned at bottom center of video */}
+               <div className="absolute bottom-8 left-0 right-0 flex flex-col items-center gap-4 px-4">
+                 {/* Status indicator */}
+                 <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/90 backdrop-blur-md rounded-full border border-indigo-200 shadow-lg shadow-indigo-200/50">
             <div
               className={`w-2 h-2 rounded-full ${
                 status === "listening"
@@ -542,7 +542,7 @@ export default function VoiceTherapyChat() {
                       : "bg-gray-400"
               }`}
             />
-            <span className="text-sm font-medium text-white">
+                   <span className="text-sm font-medium text-slate-700">
               {status === "idle"
                 ? "Ready"
                 : status === "listening"
@@ -555,22 +555,22 @@ export default function VoiceTherapyChat() {
             </span>
           </div>
 
-          {/* Free trial timer */}
-          {!isLoggedIn && freeTrialActive && (
-            <p className="text-sm text-white/90 font-medium bg-purple-900/60 backdrop-blur-sm px-4 py-2 rounded-full">
+                 {/* Free trial timer */}
+                 {!isLoggedIn && freeTrialActive && (
+                   <p className="text-sm text-indigo-700 font-medium bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full border border-indigo-200 shadow-md">
               Free trial: {formatTime(freeTrialTimeLeft)}
             </p>
           )}
 
-          {/* Session duration */}
-          {status !== "idle" && (
-            <div className="text-center">
-              <p className="text-sm text-white/90 bg-purple-900/60 backdrop-blur-sm px-4 py-2 rounded-full inline-block">
-                Session: {formatTime(sessionDuration)}
-              </p>
-              {transcript && <p className="text-xs text-white/70 mt-2">{transcript}</p>}
-            </div>
-          )}
+                 {/* Session duration */}
+                 {status !== "idle" && (
+                   <div className="text-center">
+                     <p className="text-sm text-indigo-700 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full inline-block border border-indigo-200 shadow-md font-medium">
+                       Session: {formatTime(sessionDuration)}
+                     </p>
+                     {transcript && <p className="text-xs text-slate-600 mt-2 bg-white/60 px-3 py-1 rounded-lg">{transcript}</p>}
+                   </div>
+                 )}
 
           {/* Call button - centered like phone interface with futuristic design */}
           <div className="flex justify-center">
@@ -601,24 +601,24 @@ export default function VoiceTherapyChat() {
           )}
           </div>
 
-          {/* Audio toggle */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={toggleAudio}
-            className="text-white/90 hover:text-white hover:bg-purple-800/50 backdrop-blur-sm"
-          >
+                 {/* Audio toggle */}
+                 <Button
+                   variant="ghost"
+                   size="sm"
+                   onClick={toggleAudio}
+                   className="text-indigo-700 hover:text-indigo-900 hover:bg-white/50 backdrop-blur-sm border border-indigo-200"
+                 >
             {isAudioEnabled ? <Volume2 className="w-5 h-5 mr-2" /> : <VolumeX className="w-5 h-5 mr-2" />}
             {isAudioEnabled ? "Audio On" : "Audio Off"}
           </Button>
         </div>
 
-        {/* Error messages */}
-        {elevenLabsError && (
-          <div className="absolute top-4 left-4 right-4 p-4 bg-red-500/90 backdrop-blur-sm border border-red-400/50 rounded-lg">
-            <p className="text-sm text-white text-center">{elevenLabsError}</p>
-          </div>
-        )}
+               {/* Error messages */}
+               {elevenLabsError && (
+                 <div className="absolute top-4 left-4 right-4 p-4 bg-red-50 backdrop-blur-sm border border-red-200 rounded-lg shadow-lg">
+                   <p className="text-sm text-red-700 text-center font-medium">{elevenLabsError}</p>
+                 </div>
+               )}
       </div>
 
       {/* Login button - top right corner */}
@@ -632,13 +632,13 @@ export default function VoiceTherapyChat() {
             onLogout={handleLogout}
           />
         ) : (
-          <Button
-            variant="outline"
-            onClick={() => setShowLoginModal(true)}
-            className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
-          >
-            Login / Register
-          </Button>
+               <Button
+                   variant="outline"
+                   onClick={() => setShowLoginModal(true)}
+                   className="bg-white/90 backdrop-blur-sm border-indigo-200 text-indigo-700 hover:bg-white hover:border-indigo-300 shadow-lg font-medium"
+                 >
+                   Login / Register
+                 </Button>
         )}
       </div>
 
