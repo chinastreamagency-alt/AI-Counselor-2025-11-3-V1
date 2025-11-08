@@ -67,12 +67,9 @@ export async function POST(request: NextRequest) {
 
     try {
       const session = await stripe.checkout.sessions.create({
-        // 支持多种支付方式：信用卡、PayPal、微信支付、支付宝
+        // 暂时只支持信用卡支付，其他支付方式需要在 Stripe Dashboard 中单独启用
         payment_method_types: [
           "card",           // 信用卡/借记卡
-          "paypal",         // PayPal（需要在 Stripe Dashboard 中启用）
-          "wechat_pay",     // 微信支付（需要在 Stripe Dashboard 中启用）
-          "alipay",         // 支付宝（需要在 Stripe Dashboard 中启用）
         ],
         line_items: [
           {

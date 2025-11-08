@@ -99,22 +99,22 @@ export function UserAccountPage({ user, purchasedHours, usedMinutes, onClose }: 
                 <CreditCard className="h-5 w-5 mr-2" />
                 Recharge Now
               </Button>
-            </div>
+          </div>
             <div className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 mb-3 drop-shadow-sm">
-              {remainingHours}h {remainingMins}m
-            </div>
-            {remainingMinutes <= 3 && remainingMinutes > 0 && (
+            {remainingHours}h {remainingMins}m
+          </div>
+          {remainingMinutes <= 3 && remainingMinutes > 0 && (
               <div className="flex items-center gap-2 mt-4 bg-amber-50 border-2 border-amber-300 rounded-xl px-4 py-3 shadow-md">
                 <span className="text-2xl">⚠️</span>
                 <p className="text-amber-700 font-medium">Less than 3 minutes remaining - Please recharge soon</p>
               </div>
-            )}
-            {remainingMinutes <= 0 && (
+          )}
+          {remainingMinutes <= 0 && (
               <div className="flex items-center gap-2 mt-4 bg-red-50 border-2 border-red-300 rounded-xl px-4 py-3 shadow-md">
                 <span className="text-2xl">🚨</span>
                 <p className="text-red-700 font-medium">No time remaining - Please recharge to continue</p>
               </div>
-            )}
+          )}
           </div>
         </Card>
 
@@ -141,14 +141,14 @@ export function UserAccountPage({ user, purchasedHours, usedMinutes, onClose }: 
                 >
                   <div className="flex justify-between items-start mb-2">
                     <p className="text-base font-semibold text-indigo-900">
-                      {new Date(session.startTime).toLocaleDateString("en-US", {
+                    {new Date(session.startTime).toLocaleDateString("en-US", {
                         month: "long",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
-                    </p>
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                  </p>
                     <span className="text-sm text-indigo-600 font-medium bg-white/60 px-3 py-1 rounded-lg">
-                      {Math.floor((session.duration || 0) / 60)}m {(session.duration || 0) % 60}s
+                    {Math.floor((session.duration || 0) / 60)}m {(session.duration || 0) % 60}s
                     </span>
                   </div>
                   <p className="text-sm text-slate-600">{session.messages?.length || 0} messages exchanged</p>
