@@ -517,7 +517,7 @@ export default function VoiceTherapyChat() {
   }
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900 flex items-center justify-center p-4">
+    <div className="relative h-screen overflow-hidden bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 flex items-center justify-center p-4">
       {/* Video Avatar - centered and large */}
       <div className="relative w-full max-w-2xl">
         <VideoAvatar
