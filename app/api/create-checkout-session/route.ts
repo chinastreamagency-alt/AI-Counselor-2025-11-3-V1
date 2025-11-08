@@ -2,6 +2,12 @@ import { type NextRequest, NextResponse } from "next/server"
 import { stripe } from "@/lib/stripe"
 import { getProductById } from "@/lib/products"
 import { cookies } from "next/headers"
+import { createClient } from "@supabase/supabase-js"
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,11 +56,28 @@ export async function POST(request: NextRequest) {
 
     console.log("[Stripe] User authenticated:", user.email)
 
-    // Affiliate code (simplified for now - can be enhanced later)
+    // 通过推荐码查找推广人员ID
     let affiliateId: string | undefined
     if (affiliateCode) {
-      affiliateId = affiliateCode
-      console.log("[Stripe] Affiliate code provided:", affiliateId)
+      console.log("[Stripe] Affiliate code provided:", affiliateCode)
+      
+      try {
+        const { data: affiliate, error: affiliateError } = await supabaseAdmin
+          .from("affiliates")
+          .select("id")
+          .eq("referral_code", affiliateCode)
+          .eq("status", "active")
+          .single()
+
+        if (affiliate && !affiliateError) {
+          affiliateId = affiliate.id
+          console.log("[Stripe] Found affiliate ID:", affiliateId)
+        } else {
+          console.log("[Stripe] Affiliate not found or inactive for code:", affiliateCode)
+        }
+      } catch (err) {
+        console.error("[Stripe] Error looking up affiliate:", err)
+      }
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin

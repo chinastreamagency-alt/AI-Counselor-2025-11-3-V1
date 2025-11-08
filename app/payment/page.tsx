@@ -49,6 +49,10 @@ export default function PaymentPage() {
 
   useEffect(() => {
     console.log("[v0] Payment page loaded")
+    
+    if (affiliateCode) {
+      console.log("[v0] Referral code detected:", affiliateCode)
+    }
 
     // Get user email from localStorage
     const storedUser = localStorage.getItem("user")
@@ -61,7 +65,7 @@ export default function PaymentPage() {
         console.error("[v0] Error parsing user:", error)
       }
     }
-  }, [])
+  }, [affiliateCode])
 
   const handlePurchase = async (productId: string) => {
     console.log("[Payment] User clicked purchase button for:", productId)
@@ -124,6 +128,22 @@ export default function PaymentPage() {
           <h1 className="text-4xl font-bold text-indigo-900 mb-2">Choose Your Plan</h1>
           <p className="text-slate-600 text-lg">Select the perfect plan for your counseling needs</p>
         </div>
+
+        {affiliateCode && (
+          <div className="mb-6 bg-gradient-to-r from-violet-500/10 to-cyan-500/10 border-2 border-violet-300 rounded-lg p-4">
+            <div className="flex items-center gap-3">
+              <div className="bg-violet-500 rounded-full p-2">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <p className="text-violet-900 font-semibold">推广优惠 🎉</p>
+                <p className="text-violet-700 text-sm">您正在通过推荐码购买：<span className="font-mono font-bold">{affiliateCode}</span></p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {PRODUCTS.map((product) => (

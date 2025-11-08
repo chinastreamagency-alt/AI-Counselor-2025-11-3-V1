@@ -1,0 +1,248 @@
+"use client"
+
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { TrendingUp, Mail, User, CheckCircle, Copy } from "lucide-react"
+import Link from "next/link"
+
+export default function AffiliateRegisterPage() {
+  const [name, setName] = useState("")
+  const [email, setEmail] = useState("")
+  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [success, setSuccess] = useState(false)
+  const [affiliateData, setAffiliateData] = useState<any>(null)
+  const [copied, setCopied] = useState(false)
+  const router = useRouter()
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setError(null)
+
+    if (!email) {
+      setError("邮箱是必填项")
+      setIsLoading(false)
+      return
+    }
+
+    try {
+      const response = await fetch("/api/affiliate/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "注册失败")
+      }
+
+      setAffiliateData(data.affiliate)
+      setSuccess(true)
+
+      // 保存到 localStorage
+      localStorage.setItem("affiliate", JSON.stringify(data.affiliate))
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "注册失败")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const copyLink = () => {
+    if (affiliateData?.referralLink) {
+      navigator.clipboard.writeText(affiliateData.referralLink)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
+  const copyCode = () => {
+    if (affiliateData?.referralCode) {
+      navigator.clipboard.writeText(affiliateData.referralCode)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
+  if (success && affiliateData) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
+        <Card className="bg-white/10 backdrop-blur-md border-white/20 max-w-2xl w-full">
+          <CardHeader className="text-center">
+            <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
+            <CardTitle className="text-3xl text-white">注册成功！</CardTitle>
+            <CardDescription className="text-white/70 text-lg">
+              欢迎加入我们的推广计划
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="bg-white/5 rounded-lg p-6 space-y-4">
+              <div>
+                <Label className="text-white/70 text-sm">您的推广码</Label>
+                <div className="flex gap-2 mt-2">
+                  <Input
+                    value={affiliateData.referralCode}
+                    readOnly
+                    className="bg-white/10 border-white/20 text-white font-mono text-lg font-bold"
+                  />
+                  <Button
+                    onClick={copyCode}
+                    className="bg-violet-600 hover:bg-violet-700 text-white"
+                  >
+                    {copied ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  </Button>
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-white/70 text-sm">您的推广链接</Label>
+                <div className="flex gap-2 mt-2">
+                  <Input
+                    value={affiliateData.referralLink}
+                    readOnly
+                    className="bg-white/10 border-white/20 text-white font-mono"
+                  />
+                  <Button
+                    onClick={copyLink}
+                    className="bg-violet-600 hover:bg-violet-700 text-white"
+                  >
+                    {copied ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 pt-4">
+                <div className="bg-white/5 rounded-lg p-4">
+                  <p className="text-white/70 text-sm">佣金比例</p>
+                  <p className="text-2xl font-bold text-green-400">{affiliateData.commissionRate}%</p>
+                </div>
+                <div className="bg-white/5 rounded-lg p-4">
+                  <p className="text-white/70 text-sm">账户状态</p>
+                  <p className="text-2xl font-bold text-green-400">已激活</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3 text-sm text-white/70 bg-white/5 rounded-lg p-4">
+              <p className="text-white font-semibold mb-2">📋 推广指南：</p>
+              <p>✓ 分享您的推广链接或推广码给潜在客户</p>
+              <p>✓ 客户通过您的链接购买即可获得佣金</p>
+              <p>✓ 佣金将在订单完成后自动计入您的账户</p>
+              <p>✓ 您可以在仪表板中查看实时收益和订单</p>
+            </div>
+
+            <Button
+              onClick={() => router.push("/affiliate")}
+              className="w-full bg-gradient-to-r from-violet-500 to-cyan-500 hover:from-violet-600 hover:to-cyan-600 text-white font-semibold py-6 text-lg"
+            >
+              进入推广仪表板
+            </Button>
+
+            <div className="text-center text-sm text-white/70">
+              需要帮助？{" "}
+              <a href="mailto:support@aicounselor.com" className="text-violet-400 hover:text-violet-300">
+                联系我们
+              </a>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
+      <Card className="bg-white/10 backdrop-blur-md border-white/20 max-w-md w-full">
+        <CardHeader className="text-center">
+          <TrendingUp className="w-16 h-16 text-violet-400 mx-auto mb-4" />
+          <CardTitle className="text-3xl text-white">加入推广计划</CardTitle>
+          <CardDescription className="text-white/70">
+            推广我们的产品，赚取丰厚佣金
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-6 space-y-3 text-sm text-white/80 bg-white/5 rounded-lg p-4">
+            <p className="flex items-center">
+              <span className="text-green-400 mr-2">✓</span>
+              <span>每笔成交赚取 <strong className="text-green-400">10%</strong> 佣金</span>
+            </p>
+            <p className="flex items-center">
+              <span className="text-green-400 mr-2">✓</span>
+              <span>实时追踪订单和收益</span>
+            </p>
+            <p className="flex items-center">
+              <span className="text-green-400 mr-2">✓</span>
+              <span>独立的推广链接和推荐码</span>
+            </p>
+            <p className="flex items-center">
+              <span className="text-green-400 mr-2">✓</span>
+              <span>按月结算，快速到账</span>
+            </p>
+          </div>
+
+          <form onSubmit={handleRegister} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name" className="text-white flex items-center">
+                <User className="w-4 h-4 mr-2" />
+                姓名（选填）
+              </Label>
+              <Input
+                id="name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                placeholder="请输入您的姓名"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-white flex items-center">
+                <Mail className="w-4 h-4 mr-2" />
+                邮箱 *
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                placeholder="your.email@example.com"
+              />
+            </div>
+
+            {error && (
+              <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-3">
+                <p className="text-red-200 text-sm">{error}</p>
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-gradient-to-r from-violet-500 to-cyan-500 hover:from-violet-600 hover:to-cyan-600 text-white font-semibold py-6"
+            >
+              {isLoading ? "注册中..." : "立即注册"}
+            </Button>
+
+            <div className="text-center text-sm text-white/70">
+              已有推广账户？{" "}
+              <Link href="/affiliate/login" className="text-violet-400 hover:text-violet-300 font-semibold">
+                立即登录
+              </Link>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+

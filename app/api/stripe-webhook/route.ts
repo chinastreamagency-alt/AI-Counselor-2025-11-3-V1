@@ -65,8 +65,13 @@ export async function POST(request: NextRequest) {
 
       console.log("[v0] Order created:", order.id)
 
-      // The trigger will automatically update user's total_hours
-      // and create commission if affiliate_id is present
+      // 数据库触发器会自动：
+      // 1. 更新用户的 total_hours
+      // 2. 如果有 affiliate_id，创建佣金记录并更新推广人员的佣金总额
+      
+      if (affiliateId) {
+        console.log("[v0] Affiliate commission will be created by database trigger for affiliate:", affiliateId)
+      }
 
       return NextResponse.json({ received: true })
     }
