@@ -118,6 +118,24 @@ export default function VoiceTherapyChat() {
     }
   }, [])
 
+  // 监听购买完成事件，自动刷新用户时长
+  useEffect(() => {
+    const handlePurchaseCompleted = (event: CustomEvent) => {
+      console.log("[Purchase] Detected purchase completion, refreshing user hours...")
+      if (user?.email) {
+        const profile = loadUserProfile(user.email)
+        setPurchasedHours(profile?.purchasedHours || 0)
+        console.log("[Purchase] Updated hours to:", profile?.purchasedHours)
+      }
+    }
+
+    window.addEventListener('purchaseCompleted', handlePurchaseCompleted as EventListener)
+    
+    return () => {
+      window.removeEventListener('purchaseCompleted', handlePurchaseCompleted as EventListener)
+    }
+  }, [user])
+
   useEffect(() => {
     if (freeTrialActive && !isLoggedIn && freeTrialTimeLeft > 0) {
       freeTrialTimerRef.current = setInterval(() => {

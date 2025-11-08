@@ -55,13 +55,19 @@ export default function PurchaseSuccessPage() {
               const profile = loadUserProfile(user.email)
               
               // 添加购买的时间
-              const updatedProfile = {
+              const updatedProfile: typeof profile = {
                 ...profile,
+                userId: user.email, // 确保userId存在
                 purchasedHours: (profile?.purchasedHours || 0) + data.hours,
               }
               
-              saveUserProfile(user.email, updatedProfile)
+              saveUserProfile(updatedProfile)
               console.log("[Purchase Success] User hours updated:", updatedProfile.purchasedHours)
+              
+              // 触发一个自定义事件，通知其他组件数据已更新
+              window.dispatchEvent(new CustomEvent('purchaseCompleted', { 
+                detail: { hours: data.hours } 
+              }))
             } catch (err) {
               console.error("[Purchase Success] Error updating user profile:", err)
             }
