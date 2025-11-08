@@ -158,6 +158,44 @@ export default function PaymentPage() {
           ))}
         </div>
 
+        {/* 支付方式说明 */}
+        <div className="mt-8 bg-white/10 backdrop-blur-md border-white/20 rounded-lg p-6">
+          <h3 className="text-xl font-bold text-white mb-4">💳 Multiple Payment Methods Supported</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-white/5 rounded-lg p-3 text-center">
+              <p className="text-white/90 font-medium">Credit Card</p>
+              <p className="text-white/60 text-xs">Visa, Mastercard, Amex</p>
+            </div>
+            <div className="bg-white/5 rounded-lg p-3 text-center">
+              <p className="text-white/90 font-medium">PayPal</p>
+              <p className="text-white/60 text-xs">Fast & Secure</p>
+            </div>
+            <div className="bg-white/5 rounded-lg p-3 text-center">
+              <p className="text-white/90 font-medium">WeChat Pay</p>
+              <p className="text-white/60 text-xs">微信支付</p>
+            </div>
+            <div className="bg-white/5 rounded-lg p-3 text-center">
+              <p className="text-white/90 font-medium">Alipay</p>
+              <p className="text-white/60 text-xs">支付宝</p>
+            </div>
+          </div>
+          
+          {/* 服务条款 */}
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 mb-4">
+            <h4 className="text-amber-300 font-semibold mb-2">⚠️ Refund Policy - Please Read Carefully</h4>
+            <ul className="text-white/80 text-sm space-y-1">
+              <li>• All purchases are <strong>FINAL and NON-REFUNDABLE</strong></li>
+              <li>• Once time is added to your account, it <strong>cannot be refunded</strong></li>
+              <li>• Purchased time does not expire</li>
+              <li>• By purchasing, you agree to these terms</li>
+            </ul>
+          </div>
+
+          <p className="text-white/60 text-xs text-center">
+            Secure payment powered by Stripe • Your card information is encrypted and never stored on our servers
+          </p>
+        </div>
+
         {affiliateCode && (
           <div className="mt-6 text-center">
             <p className="text-white/70 text-sm">

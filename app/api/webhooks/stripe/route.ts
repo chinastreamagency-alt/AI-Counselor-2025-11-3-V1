@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { stripe } from "@/lib/stripe"
 import { headers } from "next/headers"
+import { loadUserProfile, saveUserProfile } from "@/lib/user-profile"
 
 // 禁用 Next.js 的 body 解析，因为 Stripe 需要原始 body
 export const runtime = "nodejs"
@@ -52,16 +53,24 @@ export async function POST(request: NextRequest) {
           amountTotal: session.amount_total,
         })
 
+        if (!userEmail || !hours) {
+          console.error("[Stripe Webhook] Missing required metadata")
+          return NextResponse.json({ error: "Missing metadata" }, { status: 400 })
+        }
+
         // 为用户账户充值时间
-        // 这里我们将购买信息保存到 localStorage（通过前端）
-        // 因为我们使用的是 localStorage 而不是数据库
+        const purchasedHours = parseInt(hours, 10)
+        const userProfile = loadUserProfile(userEmail)
         
-        // 在实际应用中，您应该：
-        // 1. 将购买记录保存到数据库
-        // 2. 更新用户的可用时间
-        // 3. 发送确认邮件
+        // 更新用户的购买小时数
+        userProfile.purchasedHours = (userProfile.purchasedHours || 0) + purchasedHours
+        userProfile.lastUpdated = new Date().toISOString()
         
-        console.log("[Stripe Webhook] ✅ Payment processed successfully")
+        saveUserProfile(userProfile)
+        
+        console.log("[Stripe Webhook] ✅ Added", purchasedHours, "hours to", userEmail)
+        console.log("[Stripe Webhook] Total hours now:", userProfile.purchasedHours)
+        
         break
       }
 
@@ -74,6 +83,18 @@ export async function POST(request: NextRequest) {
       case "payment_intent.payment_failed": {
         const paymentIntent = event.data.object as any
         console.log("[Stripe Webhook] Payment failed:", paymentIntent.id)
+        break
+      }
+
+      case "charge.refunded": {
+        const charge = event.data.object as any
+        console.log("[Stripe Webhook] 🚨 Refund detected:", charge.id)
+        console.log("[Stripe Webhook] Amount refunded:", charge.amount_refunded / 100, "USD")
+        
+        // 注意：根据您的退款政策，这里可能需要从用户账户扣除时间
+        // 但是 charge 对象中没有直接包含 session metadata
+        // 您可能需要通过 charge.payment_intent 查找原始 session
+        
         break
       }
 

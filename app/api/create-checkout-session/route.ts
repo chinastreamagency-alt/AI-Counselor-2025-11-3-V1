@@ -67,7 +67,13 @@ export async function POST(request: NextRequest) {
 
     try {
       const session = await stripe.checkout.sessions.create({
-        payment_method_types: ["card"],
+        // 支持多种支付方式：信用卡、PayPal、微信支付、支付宝
+        payment_method_types: [
+          "card",           // 信用卡/借记卡
+          "paypal",         // PayPal（需要在 Stripe Dashboard 中启用）
+          "wechat_pay",     // 微信支付（需要在 Stripe Dashboard 中启用）
+          "alipay",         // 支付宝（需要在 Stripe Dashboard 中启用）
+        ],
         line_items: [
           {
             price_data: {
@@ -92,6 +98,22 @@ export async function POST(request: NextRequest) {
           hours: product.hours.toString(),
           affiliateId: affiliateId || "",
         },
+        // 防止恶意退款的设置
+        payment_intent_data: {
+          // 设置描述以帮助防止争议
+          description: `AI Counselor - ${product.hours} hours of service for ${user.email}`,
+          // 添加 metadata 用于追踪
+          metadata: {
+            userEmail: user.email,
+            productId: product.id,
+            hours: product.hours.toString(),
+            purchaseTimestamp: new Date().toISOString(),
+          },
+          // 设置为不可退款（通过业务逻辑和条款执行）
+          // 注意：Stripe 本身不支持完全禁用退款，但可以通过 Radar 规则和手动审核来防止
+        },
+        // 设置客户信息以便后续追踪
+        customer_creation: "always",
       })
 
       console.log("[Stripe] Checkout session created successfully:", session.id)

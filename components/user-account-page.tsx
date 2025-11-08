@@ -40,88 +40,128 @@ export function UserAccountPage({ user, purchasedHours, usedMinutes, onClose }: 
   }
 
   return (
-    <div className="fixed inset-0 bg-background z-50 overflow-y-auto">
-      <div className="max-w-2xl mx-auto p-6 space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <ArrowLeft className="h-5 w-5" />
+    <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 z-50 overflow-y-auto">
+      <div className="max-w-3xl mx-auto p-8 space-y-6">
+        {/* 返回按钮 */}
+        <div className="flex items-center gap-4 mb-8">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={onClose}
+            className="text-white/80 hover:text-white hover:bg-white/10 rounded-full"
+          >
+            <ArrowLeft className="h-6 w-6" />
           </Button>
-          <h1 className="text-2xl font-bold">Personal Account</h1>
+          <h1 className="text-3xl font-bold text-white">Personal Account</h1>
         </div>
 
-        <Card className="p-6">
-          <div className="flex items-center gap-4">
+        {/* 用户信息卡片 */}
+        <Card className="bg-white/10 backdrop-blur-md border-white/20 p-8">
+          <div className="flex items-center gap-6">
             {user?.image ? (
-              <img src={user.image || "/placeholder.svg"} alt={user.name} className="w-16 h-16 rounded-full" />
+              <img 
+                src={user.image || "/placeholder.svg"} 
+                alt={user.name} 
+                className="w-20 h-20 rounded-full ring-4 ring-cyan-500/50 shadow-lg shadow-cyan-500/30" 
+              />
             ) : (
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-400 to-blue-400 flex items-center justify-center">
-                <User className="h-8 w-8 text-white" />
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-cyan-500 via-purple-500 to-violet-600 flex items-center justify-center ring-4 ring-cyan-500/50 shadow-lg shadow-cyan-500/30">
+                <User className="h-10 w-10 text-white" />
               </div>
             )}
             <div>
-              <h2 className="text-xl font-semibold">{user?.name || "User"}</h2>
-              <p className="text-sm text-muted-foreground">{user?.email}</p>
+              <h2 className="text-2xl font-bold text-white">{user?.name || "User"}</h2>
+              <p className="text-base text-white/70 mt-1">{user?.email}</p>
             </div>
           </div>
         </Card>
 
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-primary" />
-              <h3 className="font-semibold">Available Consultation Time</h3>
+        {/* 可用时间卡片 - 大号显示 */}
+        <Card className="bg-gradient-to-br from-cyan-500/20 via-purple-500/20 to-violet-600/20 backdrop-blur-md border-cyan-500/30 p-8 relative overflow-hidden">
+          {/* 背景光效 */}
+          <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 via-transparent to-violet-600/10 opacity-50"></div>
+          
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-cyan-500/20 rounded-lg">
+                  <Clock className="h-7 w-7 text-cyan-400" />
+                </div>
+                <h3 className="text-xl font-bold text-white">Available Time</h3>
+              </div>
+              <Button 
+                onClick={handlePurchase}
+                size="lg"
+                className="bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-600 hover:from-cyan-400 hover:via-blue-400 hover:to-purple-500 text-white font-semibold px-6 py-3 text-base shadow-lg shadow-cyan-500/50 hover:shadow-cyan-400/60 transition-all duration-300"
+              >
+                <CreditCard className="h-5 w-5 mr-2" />
+                Recharge Now
+              </Button>
             </div>
-            <Button 
-              onClick={handlePurchase}
-              size="sm"
-              className="bg-gradient-to-r from-violet-500 to-cyan-500 hover:from-violet-600 hover:to-cyan-600"
-            >
-              <CreditCard className="h-4 w-4 mr-2" />
-              Recharge
-            </Button>
+            <div className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 mb-3">
+              {remainingHours}h {remainingMins}m
+            </div>
+            {remainingMinutes <= 3 && remainingMinutes > 0 && (
+              <div className="flex items-center gap-2 mt-4 bg-amber-500/20 border border-amber-500/40 rounded-lg px-4 py-3">
+                <span className="text-2xl">⚠️</span>
+                <p className="text-amber-300 font-medium">Less than 3 minutes remaining - Please recharge soon</p>
+              </div>
+            )}
+            {remainingMinutes <= 0 && (
+              <div className="flex items-center gap-2 mt-4 bg-red-500/20 border border-red-500/40 rounded-lg px-4 py-3">
+                <span className="text-2xl">🚨</span>
+                <p className="text-red-300 font-medium">No time remaining - Please recharge to continue</p>
+              </div>
+            )}
           </div>
-          <div className="text-3xl font-bold text-primary">
-            {remainingHours}h {remainingMins}m
-          </div>
-          {remainingMinutes <= 3 && remainingMinutes > 0 && (
-            <p className="text-sm text-amber-600 mt-2">⚠️ Less than 3 minutes remaining</p>
-          )}
-          {remainingMinutes <= 0 && (
-            <p className="text-sm text-destructive mt-2">⚠️ No time remaining - Please recharge</p>
-          )}
         </Card>
 
-        <Card className="p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Calendar className="h-5 w-5 text-primary" />
-            <h3 className="font-semibold">Recent Sessions</h3>
+        {/* 最近会话卡片 */}
+        <Card className="bg-white/10 backdrop-blur-md border-white/20 p-8">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-purple-500/20 rounded-lg">
+              <Calendar className="h-6 w-6 text-purple-400" />
+            </div>
+            <h3 className="text-xl font-bold text-white">Recent Sessions</h3>
           </div>
 
           {sessionHistory.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No session history yet</p>
+            <div className="text-center py-8">
+              <p className="text-white/60 text-base">No session history yet</p>
+              <p className="text-white/40 text-sm mt-2">Start your first conversation to see your history here</p>
+            </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {sessionHistory.map((session) => (
-                <div key={session.id} className="border-l-2 border-primary pl-4 py-2">
-                  <p className="text-sm font-medium">
-                    {new Date(session.startTime).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {Math.floor((session.duration || 0) / 60)}m {(session.duration || 0) % 60}s
-                  </p>
-                  <p className="text-xs text-muted-foreground">{session.messages?.length || 0} messages exchanged</p>
+                <div 
+                  key={session.id} 
+                  className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-white/10 transition-all"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <p className="text-base font-semibold text-white">
+                      {new Date(session.startTime).toLocaleDateString("en-US", {
+                        month: "long",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </p>
+                    <span className="text-sm text-cyan-400 font-medium">
+                      {Math.floor((session.duration || 0) / 60)}m {(session.duration || 0) % 60}s
+                    </span>
+                  </div>
+                  <p className="text-sm text-white/60">{session.messages?.length || 0} messages exchanged</p>
                 </div>
               ))}
             </div>
           )}
         </Card>
 
-        <Button onClick={onClose} className="w-full">
-          Return to Call
+        {/* 返回按钮 */}
+        <Button 
+          onClick={onClose} 
+          className="w-full bg-gradient-to-r from-violet-500 to-cyan-500 hover:from-violet-600 hover:to-cyan-600 text-white font-semibold py-6 text-lg shadow-lg"
+        >
+          Return to Counselor
         </Button>
       </div>
     </div>
