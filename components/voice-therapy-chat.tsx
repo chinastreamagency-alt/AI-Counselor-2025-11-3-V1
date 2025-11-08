@@ -64,18 +64,56 @@ export default function VoiceTherapyChat() {
   const isAISpeakingRef = useRef(false)
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user")
-    if (storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser)
-        setUser(parsedUser)
-        setIsLoggedIn(true)
+    // 首先检查 URL 参数中是否有登录成功的标记
+    const urlParams = new URLSearchParams(window.location.search)
+    const loginSuccess = urlParams.get('login')
+    const userEmail = urlParams.get('user')
+    
+    if (loginSuccess === 'success' && userEmail) {
+      // 从服务器获取完整的用户信息
+      fetch('/api/auth/custom-google/session')
+        .then(res => res.json())
+        .then(session => {
+          if (session.user) {
+            const userData = {
+              email: session.user.email,
+              name: session.user.name,
+              image: session.user.image,
+              provider: 'google',
+              sessionCount: 0
+            }
+            
+            // 保存到 localStorage
+            localStorage.setItem("user", JSON.stringify(userData))
+            setUser(userData)
+            setIsLoggedIn(true)
+            
+            const profile = loadUserProfile(userData.email)
+            setPurchasedHours(profile?.purchasedHours || 0)
+            setUsedMinutes(profile?.usedMinutes || 0)
+            
+            // 清除 URL 参数
+            window.history.replaceState({}, document.title, window.location.pathname)
+          }
+        })
+        .catch(error => {
+          console.error("Error fetching session:", error)
+        })
+    } else {
+      // 检查 localStorage 中是否有已保存的用户信息
+      const storedUser = localStorage.getItem("user")
+      if (storedUser) {
+        try {
+          const parsedUser = JSON.parse(storedUser)
+          setUser(parsedUser)
+          setIsLoggedIn(true)
 
-        const profile = loadUserProfile(parsedUser.email)
-        setPurchasedHours(profile?.purchasedHours || 0)
-        setUsedMinutes(profile?.usedMinutes || 0)
-      } catch (error) {
-        console.error("Error parsing stored user:", error)
+          const profile = loadUserProfile(parsedUser.email)
+          setPurchasedHours(profile?.purchasedHours || 0)
+          setUsedMinutes(profile?.usedMinutes || 0)
+        } catch (error) {
+          console.error("Error parsing stored user:", error)
+        }
       }
     }
   }, [])
