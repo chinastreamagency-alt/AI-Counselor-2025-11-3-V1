@@ -1,15 +1,45 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { generateReferralCode } from "@/lib/generate-referral-code"
+import bcrypt from "bcryptjs"
 
 const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, name } = await request.json()
+    const { email, name, password, inviteCode } = await request.json()
 
     if (!email) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 })
+    }
+
+    if (!password || password.length < 6) {
+      return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 })
+    }
+
+    if (!inviteCode) {
+      return NextResponse.json({ error: "Invite code is required" }, { status: 400 })
+    }
+
+    // Verify invite code
+    const { data: invite, error: inviteError } = await supabaseAdmin
+      .from("affiliate_invite_codes")
+      .select("*")
+      .eq("code", inviteCode)
+      .eq("status", "active")
+      .single()
+
+    if (inviteError || !invite) {
+      return NextResponse.json({ error: "Invalid or expired invite code" }, { status: 400 })
+    }
+
+    // Check if invite code is still valid
+    if (invite.max_uses && invite.used_count >= invite.max_uses) {
+      return NextResponse.json({ error: "Invite code has reached maximum uses" }, { status: 400 })
+    }
+
+    if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
+      return NextResponse.json({ error: "Invite code has expired" }, { status: 400 })
     }
 
     // Check if affiliate already exists
@@ -43,6 +73,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Failed to generate unique referral code" }, { status: 500 })
     }
 
+    // Hash password
+    const passwordHash = await bcrypt.hash(password, 10)
+
     // Create affiliate account
     const { data: affiliate, error } = await supabaseAdmin
       .from("affiliates")
@@ -50,6 +83,7 @@ export async function POST(request: NextRequest) {
         email,
         name: name || null,
         referral_code: referralCode,
+        password_hash: passwordHash,
         commission_rate: 10.0, // Default 10% commission
         status: "active",
       })
@@ -60,6 +94,17 @@ export async function POST(request: NextRequest) {
       console.error("[v0] Error creating affiliate:", error)
       throw error
     }
+
+    // Update invite code usage
+    await supabaseAdmin
+      .from("affiliate_invite_codes")
+      .update({
+        used_count: invite.used_count + 1,
+        status: invite.max_uses && invite.used_count + 1 >= invite.max_uses ? "used" : "active",
+        used_by_affiliate_id: affiliate.id,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", invite.id)
 
     console.log("[v0] Affiliate created:", affiliate.id, "Code:", referralCode)
 

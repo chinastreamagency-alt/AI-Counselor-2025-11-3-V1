@@ -13,6 +13,7 @@ import Link from "next/link"
 
 export default function AffiliateLoginPage() {
   const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
@@ -26,7 +27,7 @@ export default function AffiliateLoginPage() {
       const response = await fetch("/api/affiliate/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, password }),
       })
 
       const data = await response.json()
@@ -70,6 +71,21 @@ export default function AffiliateLoginPage() {
                 required
                 className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
                 placeholder="your@email.com"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-white">
+                Password
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                placeholder="Enter your password"
               />
             </div>
 

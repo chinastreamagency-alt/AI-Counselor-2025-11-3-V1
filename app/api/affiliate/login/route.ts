@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { SignJWT } from "jose"
+import bcrypt from "bcryptjs"
 
 const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
@@ -8,21 +9,35 @@ const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "your-secr
 
 export async function POST(request: NextRequest) {
   try {
-    const { email } = await request.json()
+    const { email, password } = await request.json()
 
     if (!email) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 })
+    }
+
+    if (!password) {
+      return NextResponse.json({ error: "Password is required" }, { status: 400 })
     }
 
     // Find affiliate by email
     const { data: affiliate, error } = await supabaseAdmin.from("affiliates").select("*").eq("email", email).single()
 
     if (error || !affiliate) {
-      return NextResponse.json({ error: "Affiliate account not found" }, { status: 404 })
+      return NextResponse.json({ error: "Invalid email or password" }, { status: 401 })
     }
 
     if (affiliate.status !== "active") {
       return NextResponse.json({ error: "Affiliate account is not active" }, { status: 403 })
+    }
+
+    // Verify password
+    if (!affiliate.password_hash) {
+      return NextResponse.json({ error: "Account requires password setup. Please contact support." }, { status: 400 })
+    }
+
+    const isValidPassword = await bcrypt.compare(password, affiliate.password_hash)
+    if (!isValidPassword) {
+      return NextResponse.json({ error: "Invalid email or password" }, { status: 401 })
     }
 
     // Create JWT token

@@ -12,6 +12,9 @@ import Link from "next/link"
 export default function AffiliateRegisterPage() {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [inviteCode, setInviteCode] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -30,11 +33,29 @@ export default function AffiliateRegisterPage() {
       return
     }
 
+    if (!inviteCode) {
+      setError("邀请码是必填项")
+      setIsLoading(false)
+      return
+    }
+
+    if (!password || password.length < 6) {
+      setError("密码至少需要6个字符")
+      setIsLoading(false)
+      return
+    }
+
+    if (password !== confirmPassword) {
+      setError("两次输入的密码不一致")
+      setIsLoading(false)
+      return
+    }
+
     try {
       const response = await fetch("/api/affiliate/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email }),
+        body: JSON.stringify({ name, email, password, inviteCode }),
       })
 
       const data = await response.json()
@@ -171,7 +192,7 @@ export default function AffiliateRegisterPage() {
           <div className="mb-6 space-y-3 text-sm text-white/80 bg-white/5 rounded-lg p-4">
             <p className="flex items-center">
               <span className="text-green-400 mr-2">✓</span>
-              <span>每笔成交赚取 <strong className="text-green-400">10%</strong> 佣金</span>
+              <span>每笔成交赚取高达 <strong className="text-green-400">50%</strong> 佣金</span>
             </p>
             <p className="flex items-center">
               <span className="text-green-400 mr-2">✓</span>
@@ -189,17 +210,18 @@ export default function AffiliateRegisterPage() {
 
           <form onSubmit={handleRegister} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name" className="text-white flex items-center">
-                <User className="w-4 h-4 mr-2" />
-                姓名（选填）
+              <Label htmlFor="inviteCode" className="text-white flex items-center">
+                <TrendingUp className="w-4 h-4 mr-2" />
+                邀请码 *
               </Label>
               <Input
-                id="name"
+                id="inviteCode"
                 type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
-                placeholder="请输入您的姓名"
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                required
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/50 font-mono uppercase"
+                placeholder="请输入邀请码"
               />
             </div>
 
@@ -216,6 +238,51 @@ export default function AffiliateRegisterPage() {
                 required
                 className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
                 placeholder="your.email@example.com"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="name" className="text-white flex items-center">
+                <User className="w-4 h-4 mr-2" />
+                姓名（选填）
+              </Label>
+              <Input
+                id="name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                placeholder="请输入您的姓名"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-white">
+                密码 * (至少6个字符)
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                placeholder="请设置密码"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword" className="text-white">
+                确认密码 *
+              </Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                placeholder="请再次输入密码"
               />
             </div>
 

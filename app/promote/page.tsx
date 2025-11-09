@@ -164,7 +164,7 @@ export default function AffiliateRegistrationPage() {
               <ul className="space-y-2 text-green-200 text-sm">
                 <li className="flex items-start">
                   <span className="mr-2">✓</span>
-                  <span>Earn 10% commission on every sale</span>
+                  <span>Earn up to 50% commission on every sale</span>
                 </li>
                 <li className="flex items-start">
                   <span className="mr-2">✓</span>
