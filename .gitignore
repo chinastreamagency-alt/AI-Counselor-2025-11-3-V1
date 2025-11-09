@@ -20,6 +20,9 @@ yarn-error.log*
 .env*
 VERCEL_ENV_READY.txt
 
+# admin config (contains sensitive credentials)
+.admin-config.json
+
 # vercel
 .vercel
 

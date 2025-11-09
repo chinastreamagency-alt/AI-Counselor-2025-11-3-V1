@@ -67,7 +67,7 @@ export default function AdminAffiliatesPage() {
   useEffect(() => {
     const storedAdmin = localStorage.getItem("admin")
     if (!storedAdmin) {
-      router.push("/admin/login")
+      router.push("/ad7m2in9/login")
       return
     }
 
@@ -79,7 +79,7 @@ export default function AdminAffiliatesPage() {
       const params = new URLSearchParams()
       if (statusFilter !== "all") params.append("status", statusFilter)
 
-      const response = await fetch(`/api/admin/affiliates?${params}`)
+      const response = await fetch(`/api/ad7m2in9/affiliates?${params}`)
       if (!response.ok) throw new Error("Failed to fetch affiliates")
 
       const data = await response.json()
@@ -93,7 +93,7 @@ export default function AdminAffiliatesPage() {
 
   const fetchCommissions = async (affiliateId: string) => {
     try {
-      const response = await fetch(`/api/admin/affiliates/${affiliateId}/commissions`)
+      const response = await fetch(`/api/ad7m2in9/affiliates/${affiliateId}/commissions`)
       if (!response.ok) throw new Error("Failed to fetch commissions")
 
       const data = await response.json()
@@ -114,7 +114,7 @@ export default function AdminAffiliatesPage() {
 
     setIsSettling(true)
     try {
-      const response = await fetch("/api/admin/commissions/settle", {
+      const response = await fetch("/api/ad7m2in9/commissions/settle", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ commissionIds: selectedCommissions }),
@@ -143,7 +143,7 @@ export default function AdminAffiliatesPage() {
       if (newCommissionRate) updates.commissionRate = Number.parseFloat(newCommissionRate)
       if (newStatus) updates.status = newStatus
 
-      const response = await fetch("/api/admin/affiliates", {
+      const response = await fetch("/api/ad7m2in9/affiliates", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -185,7 +185,7 @@ export default function AdminAffiliatesPage() {
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <Button asChild variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20">
-            <Link href="/admin">
+            <Link href="/ad7m2in9">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Dashboard
             </Link>

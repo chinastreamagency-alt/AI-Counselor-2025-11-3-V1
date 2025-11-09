@@ -49,7 +49,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     const storedAdmin = localStorage.getItem("admin")
     if (!storedAdmin) {
-      router.push("/admin/login")
+      router.push("/ad7m2in9/login")
       return
     }
 
@@ -75,7 +75,7 @@ export default function AdminDashboard() {
       if (startDate) params.append("startDate", startDate)
       if (endDate) params.append("endDate", endDate)
 
-      const response = await fetch(`/api/admin/orders?${params}`)
+      const response = await fetch(`/api/ad7m2in9/orders?${params}`)
       if (!response.ok) throw new Error("Failed to fetch orders")
 
       const data = await response.json()
@@ -87,7 +87,7 @@ export default function AdminDashboard() {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch("/api/admin/stats")
+      const response = await fetch("/api/ad7m2in9/stats")
       if (!response.ok) throw new Error("Failed to fetch stats")
 
       const data = await response.json()
@@ -99,7 +99,7 @@ export default function AdminDashboard() {
 
   const handleLogout = () => {
     localStorage.removeItem("admin")
-    router.push("/admin/login")
+    router.push("/ad7m2in9/login")
   }
 
   const exportToCSV = () => {

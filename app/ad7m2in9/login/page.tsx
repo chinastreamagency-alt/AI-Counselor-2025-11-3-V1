@@ -23,7 +23,7 @@ export default function AdminLoginPage() {
     setError(null)
 
     try {
-      const response = await fetch("/api/admin/login", {
+      const response = await fetch("/api/ad7m2in9/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
@@ -38,7 +38,7 @@ export default function AdminLoginPage() {
       // Store admin info in localStorage
       localStorage.setItem("admin", JSON.stringify(data.admin))
 
-      router.push("/admin")
+      router.push("/ad7m2in9")
     } catch (error) {
       setError(error instanceof Error ? error.message : "Login failed")
     } finally {
