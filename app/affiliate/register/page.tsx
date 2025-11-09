@@ -98,9 +98,9 @@ export default function AffiliateRegisterPage() {
         <Card className="bg-white/10 backdrop-blur-md border-white/20 max-w-2xl w-full">
           <CardHeader className="text-center">
             <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
-            <CardTitle className="text-3xl text-white">注册成功！</CardTitle>
+            <CardTitle className="text-3xl text-white">Registration Successful!</CardTitle>
             <CardDescription className="text-white/70 text-lg">
-              欢迎加入我们的推广计划
+              Welcome to our affiliate program
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -163,13 +163,13 @@ export default function AffiliateRegisterPage() {
               onClick={() => router.push("/affiliate")}
               className="w-full bg-gradient-to-r from-violet-500 to-cyan-500 hover:from-violet-600 hover:to-cyan-600 text-white font-semibold py-6 text-lg"
             >
-              进入推广仪表板
+              Go to Dashboard
             </Button>
 
             <div className="text-center text-sm text-white/70">
-              需要帮助？{" "}
+              Need help?{" "}
               <a href="mailto:support@aicounselor.com" className="text-violet-400 hover:text-violet-300">
-                联系我们
+                Contact us
               </a>
             </div>
           </CardContent>
@@ -183,28 +183,28 @@ export default function AffiliateRegisterPage() {
       <Card className="bg-white/10 backdrop-blur-md border-white/20 max-w-md w-full">
         <CardHeader className="text-center">
           <TrendingUp className="w-16 h-16 text-violet-400 mx-auto mb-4" />
-          <CardTitle className="text-3xl text-white">加入推广计划</CardTitle>
+          <CardTitle className="text-3xl text-white">Join Affiliate Program</CardTitle>
           <CardDescription className="text-white/70">
-            推广我们的产品，赚取丰厚佣金
+            Promote our product and earn generous commissions
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="mb-6 space-y-3 text-sm text-white/80 bg-white/5 rounded-lg p-4">
             <p className="flex items-center">
               <span className="text-green-400 mr-2">✓</span>
-              <span>每笔成交赚取高达 <strong className="text-green-400">50%</strong> 佣金</span>
+              <span>Earn up to <strong className="text-green-400">50%</strong> commission on every sale</span>
             </p>
             <p className="flex items-center">
               <span className="text-green-400 mr-2">✓</span>
-              <span>实时追踪订单和收益</span>
+              <span>Track your earnings in real-time</span>
             </p>
             <p className="flex items-center">
               <span className="text-green-400 mr-2">✓</span>
-              <span>独立的推广链接和推荐码</span>
+              <span>Get your unique referral link and code</span>
             </p>
             <p className="flex items-center">
               <span className="text-green-400 mr-2">✓</span>
-              <span>按月结算，快速到账</span>
+              <span>Monthly settlements, fast payouts</span>
             </p>
           </div>
 
@@ -212,7 +212,7 @@ export default function AffiliateRegisterPage() {
             <div className="space-y-2">
               <Label htmlFor="inviteCode" className="text-white flex items-center">
                 <TrendingUp className="w-4 h-4 mr-2" />
-                邀请码 *
+                Invite Code *
               </Label>
               <Input
                 id="inviteCode"
@@ -221,14 +221,14 @@ export default function AffiliateRegisterPage() {
                 onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
                 required
                 className="bg-white/10 border-white/20 text-white placeholder:text-white/50 font-mono uppercase"
-                placeholder="请输入邀请码"
+                placeholder="Enter invite code"
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="email" className="text-white flex items-center">
                 <Mail className="w-4 h-4 mr-2" />
-                邮箱 *
+                Email *
               </Label>
               <Input
                 id="email"
@@ -244,7 +244,7 @@ export default function AffiliateRegisterPage() {
             <div className="space-y-2">
               <Label htmlFor="name" className="text-white flex items-center">
                 <User className="w-4 h-4 mr-2" />
-                姓名（选填）
+                Name (Optional)
               </Label>
               <Input
                 id="name"
@@ -252,13 +252,13 @@ export default function AffiliateRegisterPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
-                placeholder="请输入您的姓名"
+                placeholder="Your name"
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="password" className="text-white">
-                密码 * (至少6个字符)
+                Password * (At least 6 characters)
               </Label>
               <Input
                 id="password"
@@ -267,13 +267,13 @@ export default function AffiliateRegisterPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
-                placeholder="请设置密码"
+                placeholder="Set your password"
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="confirmPassword" className="text-white">
-                确认密码 *
+                Confirm Password *
               </Label>
               <Input
                 id="confirmPassword"
@@ -282,7 +282,7 @@ export default function AffiliateRegisterPage() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
-                placeholder="请再次输入密码"
+                placeholder="Confirm your password"
               />
             </div>
 
@@ -297,13 +297,13 @@ export default function AffiliateRegisterPage() {
               disabled={isLoading}
               className="w-full bg-gradient-to-r from-violet-500 to-cyan-500 hover:from-violet-600 hover:to-cyan-600 text-white font-semibold py-6"
             >
-              {isLoading ? "注册中..." : "立即注册"}
+              {isLoading ? "Registering..." : "Register Now"}
             </Button>
 
             <div className="text-center text-sm text-white/70">
-              已有推广账户？{" "}
+              Already have an account?{" "}
               <Link href="/affiliate/login" className="text-violet-400 hover:text-violet-300 font-semibold">
-                立即登录
+                Login here
               </Link>
             </div>
           </form>

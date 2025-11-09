@@ -49,6 +49,7 @@ export function VideoAvatar({ isListening, isSpeaking, currentSpeaker, currentTe
         loop
         muted
         playsInline
+        preload="auto"
         poster="/ai-counselor-background.mp4"
       >
         <source
