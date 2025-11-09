@@ -173,93 +173,93 @@ export default function AdminAffiliatesPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
-        <p className="text-white text-xl">Loading...</p>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-100 to-purple-50 flex items-center justify-center">
+        <p className="text-indigo-900 text-xl">加载中...</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-100 to-purple-50 p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
-          <Button asChild variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20">
+          <Button asChild variant="outline" className="bg-white border-indigo-300 text-indigo-700 hover:bg-indigo-50">
             <Link href="/ad7m2in9">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Dashboard
+              返回控制台
             </Link>
           </Button>
           <div>
-            <h1 className="text-4xl font-bold text-white">Affiliate Management</h1>
-            <p className="text-white/70">Manage affiliates and settle commissions</p>
+            <h1 className="text-4xl font-bold text-indigo-900">分销商管理</h1>
+            <p className="text-indigo-700">管理分销商并结算佣金</p>
           </div>
         </div>
 
         {/* Filters */}
-        <Card className="bg-white/10 backdrop-blur-md border-white/20 mb-6">
+        <Card className="bg-white/90 backdrop-blur-md border-indigo-200 shadow-lg mb-6">
           <CardHeader>
-            <CardTitle className="text-white">Affiliates</CardTitle>
-            <CardDescription className="text-white/70">View and manage all affiliate partners</CardDescription>
+            <CardTitle className="text-indigo-900">分销商列表</CardTitle>
+            <CardDescription className="text-indigo-700">查看和管理所有分销商伙伴</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="mb-4">
-              <Label className="text-white">Status Filter</Label>
+              <Label className="text-indigo-900">状态筛选</Label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="bg-white/10 border-white/20 text-white max-w-xs">
+                <SelectTrigger className="bg-white border-indigo-300 text-indigo-900 max-w-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="suspended">Suspended</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="all">全部状态</SelectItem>
+                  <SelectItem value="active">激活</SelectItem>
+                  <SelectItem value="suspended">暂停</SelectItem>
+                  <SelectItem value="inactive">未激活</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {/* Affiliates Table */}
-            <div className="rounded-lg border border-white/20 overflow-hidden">
+            <div className="rounded-lg border border-indigo-200 overflow-hidden bg-white">
               <Table>
                 <TableHeader>
-                  <TableRow className="border-white/20 hover:bg-white/5">
-                    <TableHead className="text-white">Affiliate</TableHead>
-                    <TableHead className="text-white">Referral Code</TableHead>
-                    <TableHead className="text-white">Commission Rate</TableHead>
-                    <TableHead className="text-white">Total Earned</TableHead>
-                    <TableHead className="text-white">Unsettled</TableHead>
-                    <TableHead className="text-white">Orders</TableHead>
-                    <TableHead className="text-white">Status</TableHead>
-                    <TableHead className="text-white">Actions</TableHead>
+                  <TableRow className="border-indigo-200 hover:bg-indigo-50/50">
+                    <TableHead className="text-indigo-900 font-semibold">分销商</TableHead>
+                    <TableHead className="text-indigo-900 font-semibold">推荐码</TableHead>
+                    <TableHead className="text-indigo-900 font-semibold">佣金比例</TableHead>
+                    <TableHead className="text-indigo-900 font-semibold">总收入</TableHead>
+                    <TableHead className="text-indigo-900 font-semibold">未结算</TableHead>
+                    <TableHead className="text-indigo-900 font-semibold">订单数</TableHead>
+                    <TableHead className="text-indigo-900 font-semibold">状态</TableHead>
+                    <TableHead className="text-indigo-900 font-semibold">操作</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {affiliates.map((affiliate) => (
-                    <TableRow key={affiliate.id} className="border-white/20 hover:bg-white/5">
-                      <TableCell className="text-white">
+                    <TableRow key={affiliate.id} className="border-indigo-200 hover:bg-indigo-50/30">
+                      <TableCell className="text-indigo-900">
                         <div>
-                          <div className="font-medium">{affiliate.name || "N/A"}</div>
-                          <div className="text-sm text-white/70">{affiliate.email}</div>
+                          <div className="font-medium">{affiliate.name || "未填写"}</div>
+                          <div className="text-sm text-indigo-600">{affiliate.email}</div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-white font-mono">{affiliate.referral_code}</TableCell>
-                      <TableCell className="text-white">{affiliate.commission_rate}%</TableCell>
-                      <TableCell className="text-white">${affiliate.total_commission.toFixed(2)}</TableCell>
-                      <TableCell className="text-white font-semibold">
+                      <TableCell className="text-indigo-900 font-mono">{affiliate.referral_code}</TableCell>
+                      <TableCell className="text-indigo-900">{affiliate.commission_rate}%</TableCell>
+                      <TableCell className="text-indigo-900">${affiliate.total_commission.toFixed(2)}</TableCell>
+                      <TableCell className="text-indigo-900 font-semibold">
                         ${affiliate.unsettled_commission.toFixed(2)}
                       </TableCell>
-                      <TableCell className="text-white">{affiliate.orderCount}</TableCell>
+                      <TableCell className="text-indigo-900">{affiliate.orderCount}</TableCell>
                       <TableCell>
                         <span
                           className={`px-2 py-1 rounded-full text-xs font-semibold ${
                             affiliate.status === "active"
-                              ? "bg-green-500/20 text-green-300"
+                              ? "bg-green-100 text-green-700 border border-green-300"
                               : affiliate.status === "suspended"
-                                ? "bg-red-500/20 text-red-300"
-                                : "bg-gray-500/20 text-gray-300"
+                                ? "bg-red-100 text-red-700 border border-red-300"
+                                : "bg-gray-100 text-gray-700 border border-gray-300"
                           }`}
                         >
-                          {affiliate.status}
+                          {affiliate.status === "active" ? "激活" : affiliate.status === "suspended" ? "暂停" : "未激活"}
                         </span>
                       </TableCell>
                       <TableCell>
@@ -269,7 +269,7 @@ export default function AdminAffiliatesPage() {
                             onClick={() => handleViewCommissions(affiliate)}
                             className="bg-violet-600 hover:bg-violet-700 text-white"
                           >
-                            View
+                            查看
                           </Button>
                           <Dialog>
                             <DialogTrigger asChild>
@@ -281,39 +281,39 @@ export default function AdminAffiliatesPage() {
                                   setNewCommissionRate(affiliate.commission_rate.toString())
                                   setNewStatus(affiliate.status)
                                 }}
-                                className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                                className="bg-white border-indigo-300 text-indigo-700 hover:bg-indigo-50"
                               >
-                                Edit
+                                编辑
                               </Button>
                             </DialogTrigger>
-                            <DialogContent className="bg-slate-900 border-white/20">
+                            <DialogContent className="bg-white border-indigo-200">
                               <DialogHeader>
-                                <DialogTitle className="text-white">Edit Affiliate</DialogTitle>
-                                <DialogDescription className="text-white/70">
-                                  Update affiliate settings
+                                <DialogTitle className="text-indigo-900">编辑分销商</DialogTitle>
+                                <DialogDescription className="text-indigo-700">
+                                  更新分销商设置
                                 </DialogDescription>
                               </DialogHeader>
                               <div className="space-y-4">
                                 <div className="space-y-2">
-                                  <Label className="text-white">Commission Rate (%)</Label>
+                                  <Label className="text-indigo-900">佣金比例 (%)</Label>
                                   <Input
                                     type="number"
                                     step="0.01"
                                     value={newCommissionRate}
                                     onChange={(e) => setNewCommissionRate(e.target.value)}
-                                    className="bg-white/10 border-white/20 text-white"
+                                    className="bg-white border-indigo-300 text-indigo-900"
                                   />
                                 </div>
                                 <div className="space-y-2">
-                                  <Label className="text-white">Status</Label>
+                                  <Label className="text-indigo-900">状态</Label>
                                   <Select value={newStatus} onValueChange={setNewStatus}>
-                                    <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                                    <SelectTrigger className="bg-white border-indigo-300 text-indigo-900">
                                       <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      <SelectItem value="active">Active</SelectItem>
-                                      <SelectItem value="suspended">Suspended</SelectItem>
-                                      <SelectItem value="inactive">Inactive</SelectItem>
+                                      <SelectItem value="active">激活</SelectItem>
+                                      <SelectItem value="suspended">暂停</SelectItem>
+                                      <SelectItem value="inactive">未激活</SelectItem>
                                     </SelectContent>
                                   </Select>
                                 </div>
@@ -321,7 +321,7 @@ export default function AdminAffiliatesPage() {
                                   onClick={handleUpdateAffiliate}
                                   className="w-full bg-gradient-to-r from-violet-500 to-cyan-500 hover:from-violet-600 hover:to-cyan-600 text-white"
                                 >
-                                  Update Affiliate
+                                  更新分销商
                                 </Button>
                               </div>
                             </DialogContent>
@@ -336,7 +336,7 @@ export default function AdminAffiliatesPage() {
 
             {affiliates.length === 0 && (
               <div className="text-center py-8">
-                <p className="text-white/70">No affiliates found</p>
+                <p className="text-indigo-600">暂无分销商</p>
               </div>
             )}
           </CardContent>
@@ -344,20 +344,19 @@ export default function AdminAffiliatesPage() {
 
         {/* Commissions Dialog */}
         <Dialog open={showCommissionsDialog} onOpenChange={setShowCommissionsDialog}>
-          <DialogContent className="bg-slate-900 border-white/20 max-w-4xl">
+          <DialogContent className="bg-white border-indigo-200 max-w-4xl">
             <DialogHeader>
-              <DialogTitle className="text-white">
-                Commissions for {selectedAffiliate?.name || selectedAffiliate?.email}
+              <DialogTitle className="text-indigo-900">
+                {selectedAffiliate?.name || selectedAffiliate?.email} 的佣金记录
               </DialogTitle>
-              <DialogDescription className="text-white/70">Manage and settle affiliate commissions</DialogDescription>
+              <DialogDescription className="text-indigo-700">管理并结算分销商佣金</DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4">
               {selectedCommissions.length > 0 && (
-                <div className="flex justify-between items-center bg-violet-500/20 border border-violet-500/30 rounded-lg p-4">
-                  <div className="text-white">
-                    <span className="font-semibold">{selectedCommissions.length}</span> commission
-                    {selectedCommissions.length > 1 ? "s" : ""} selected
+                <div className="flex justify-between items-center bg-violet-100 border border-violet-300 rounded-lg p-4">
+                  <div className="text-indigo-900">
+                    已选择 <span className="font-semibold">{selectedCommissions.length}</span> 笔佣金
                   </div>
                   <Button
                     onClick={handleSettleCommissions}
@@ -365,26 +364,26 @@ export default function AdminAffiliatesPage() {
                     className="bg-green-600 hover:bg-green-700 text-white"
                   >
                     <DollarSign className="w-4 h-4 mr-2" />
-                    {isSettling ? "Settling..." : "Settle Selected"}
+                    {isSettling ? "结算中..." : "结算选中项"}
                   </Button>
                 </div>
               )}
 
-              <div className="rounded-lg border border-white/20 overflow-hidden max-h-96 overflow-y-auto">
+              <div className="rounded-lg border border-indigo-200 overflow-hidden max-h-96 overflow-y-auto bg-white">
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-white/20 hover:bg-white/5">
-                      <TableHead className="text-white">Select</TableHead>
-                      <TableHead className="text-white">Customer</TableHead>
-                      <TableHead className="text-white">Order Amount</TableHead>
-                      <TableHead className="text-white">Commission</TableHead>
-                      <TableHead className="text-white">Status</TableHead>
-                      <TableHead className="text-white">Date</TableHead>
+                    <TableRow className="border-indigo-200 hover:bg-indigo-50/50">
+                      <TableHead className="text-indigo-900 font-semibold">选择</TableHead>
+                      <TableHead className="text-indigo-900 font-semibold">客户</TableHead>
+                      <TableHead className="text-indigo-900 font-semibold">订单金额</TableHead>
+                      <TableHead className="text-indigo-900 font-semibold">佣金</TableHead>
+                      <TableHead className="text-indigo-900 font-semibold">状态</TableHead>
+                      <TableHead className="text-indigo-900 font-semibold">日期</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {commissions.map((commission) => (
-                      <TableRow key={commission.id} className="border-white/20 hover:bg-white/5">
+                      <TableRow key={commission.id} className="border-indigo-200 hover:bg-indigo-50/30">
                         <TableCell>
                           {commission.status === "pending" && (
                             <input
@@ -395,26 +394,26 @@ export default function AdminAffiliatesPage() {
                             />
                           )}
                         </TableCell>
-                        <TableCell className="text-white">
+                        <TableCell className="text-indigo-900">
                           <div>
-                            <div className="font-medium">{commission.orders.users.name || "N/A"}</div>
-                            <div className="text-sm text-white/70">{commission.orders.users.email}</div>
+                            <div className="font-medium">{commission.orders.users.name || "未填写"}</div>
+                            <div className="text-sm text-indigo-600">{commission.orders.users.email}</div>
                           </div>
                         </TableCell>
-                        <TableCell className="text-white">${commission.orders.amount.toFixed(2)}</TableCell>
-                        <TableCell className="text-white font-semibold">${commission.amount.toFixed(2)}</TableCell>
+                        <TableCell className="text-indigo-900">${commission.orders.amount.toFixed(2)}</TableCell>
+                        <TableCell className="text-indigo-900 font-semibold">${commission.amount.toFixed(2)}</TableCell>
                         <TableCell>
                           <span
                             className={`px-2 py-1 rounded-full text-xs font-semibold ${
                               commission.status === "settled"
-                                ? "bg-green-500/20 text-green-300"
-                                : "bg-yellow-500/20 text-yellow-300"
+                                ? "bg-green-100 text-green-700 border border-green-300"
+                                : "bg-yellow-100 text-yellow-700 border border-yellow-300"
                             }`}
                           >
-                            {commission.status}
+                            {commission.status === "settled" ? "已结算" : "待结算"}
                           </span>
                         </TableCell>
-                        <TableCell className="text-white">
+                        <TableCell className="text-indigo-900">
                           {new Date(commission.created_at).toLocaleDateString()}
                         </TableCell>
                       </TableRow>
@@ -425,7 +424,7 @@ export default function AdminAffiliatesPage() {
 
               {commissions.length === 0 && (
                 <div className="text-center py-8">
-                  <p className="text-white/70">No commissions found</p>
+                  <p className="text-indigo-600">暂无佣金记录</p>
                 </div>
               )}
             </div>

@@ -51,16 +51,16 @@ export default function AdminLoginPage() {
       <Card className="bg-white/90 backdrop-blur-md border-indigo-200 shadow-xl max-w-md w-full">
         <CardHeader className="text-center">
           <Shield className="w-16 h-16 text-indigo-600 mx-auto mb-4" />
-          <CardTitle className="text-3xl text-indigo-900">Admin Login</CardTitle>
+          <CardTitle className="text-3xl text-indigo-900">管理员登录</CardTitle>
           <CardDescription className="text-indigo-700">
-            Enter your credentials to access the admin dashboard
+            输入您的凭据以访问后台管理系统
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="username" className="text-indigo-900">
-                Username
+                用户名
               </Label>
               <Input
                 id="username"
@@ -69,13 +69,13 @@ export default function AdminLoginPage() {
                 onChange={(e) => setUsername(e.target.value)}
                 required
                 className="bg-white border-indigo-300 text-indigo-900 placeholder:text-indigo-400 focus:border-indigo-500 focus:ring-indigo-500"
-                placeholder="Enter username"
+                placeholder="请输入用户名"
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="password" className="text-indigo-900">
-                Password
+                密码
               </Label>
               <Input
                 id="password"
@@ -84,7 +84,7 @@ export default function AdminLoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 className="bg-white border-indigo-300 text-indigo-900 placeholder:text-indigo-400 focus:border-indigo-500 focus:ring-indigo-500"
-                placeholder="Enter password"
+                placeholder="请输入密码"
               />
             </div>
 
@@ -99,7 +99,7 @@ export default function AdminLoginPage() {
               disabled={isLoading}
               className="w-full bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-600 hover:from-cyan-400 hover:via-blue-400 hover:to-purple-500 text-white font-semibold py-6 shadow-lg"
             >
-              {isLoading ? "Logging in..." : "Login"}
+              {isLoading ? "登录中..." : "登录"}
             </Button>
           </form>
         </CardContent>

@@ -127,7 +127,7 @@ export default function AdminDashboard() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-100 to-purple-50 flex items-center justify-center">
-        <p className="text-indigo-900 text-xl">Loading...</p>
+        <p className="text-indigo-900 text-xl">加载中...</p>
       </div>
     )
   }
@@ -138,8 +138,8 @@ export default function AdminDashboard() {
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-4xl font-bold text-indigo-900 mb-2">Admin Dashboard</h1>
-            <p className="text-indigo-700">Welcome back, {admin?.username}</p>
+            <h1 className="text-4xl font-bold text-indigo-900 mb-2">后台管理控制台</h1>
+            <p className="text-indigo-700">欢迎回来，{admin?.username}</p>
           </div>
           <Button
             onClick={handleLogout}
@@ -147,7 +147,7 @@ export default function AdminDashboard() {
             className="bg-white border-indigo-300 text-indigo-700 hover:bg-indigo-50 hover:border-indigo-400"
           >
             <LogOut className="w-4 h-4 mr-2" />
-            Logout
+            退出登录
           </Button>
         </div>
 
@@ -156,7 +156,7 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <Card className="bg-white/90 backdrop-blur-md border-indigo-200 shadow-lg">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-indigo-700">Total Revenue</CardTitle>
+                <CardTitle className="text-sm font-medium text-indigo-700">总收入</CardTitle>
                 <DollarSign className="w-4 h-4 text-green-600" />
               </CardHeader>
               <CardContent>
@@ -166,7 +166,7 @@ export default function AdminDashboard() {
 
             <Card className="bg-white/90 backdrop-blur-md border-indigo-200 shadow-lg">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-indigo-700">Total Orders</CardTitle>
+                <CardTitle className="text-sm font-medium text-indigo-700">订单总数</CardTitle>
                 <ShoppingCart className="w-4 h-4 text-blue-600" />
               </CardHeader>
               <CardContent>
@@ -176,7 +176,7 @@ export default function AdminDashboard() {
 
             <Card className="bg-white/90 backdrop-blur-md border-indigo-200 shadow-lg">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-indigo-700">Total Users</CardTitle>
+                <CardTitle className="text-sm font-medium text-indigo-700">用户总数</CardTitle>
                 <Users className="w-4 h-4 text-purple-600" />
               </CardHeader>
               <CardContent>
@@ -186,7 +186,7 @@ export default function AdminDashboard() {
 
             <Card className="bg-white/90 backdrop-blur-md border-indigo-200 shadow-lg">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-indigo-700">Affiliates</CardTitle>
+                <CardTitle className="text-sm font-medium text-indigo-700">分销商数量</CardTitle>
                 <TrendingUp className="w-4 h-4 text-cyan-600" />
               </CardHeader>
               <CardContent>
@@ -199,28 +199,28 @@ export default function AdminDashboard() {
         {/* Filters and Export */}
         <Card className="bg-white/90 backdrop-blur-md border-indigo-200 shadow-lg mb-6">
           <CardHeader>
-            <CardTitle className="text-indigo-900">Payment Records</CardTitle>
-            <CardDescription className="text-indigo-700">View and filter all payment transactions</CardDescription>
+            <CardTitle className="text-indigo-900">支付记录</CardTitle>
+            <CardDescription className="text-indigo-700">查看和筛选所有支付交易记录</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
               <div className="space-y-2">
-                <Label className="text-indigo-900">Status</Label>
+                <Label className="text-indigo-900">状态</Label>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger className="bg-white border-indigo-300 text-indigo-900">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="failed">Failed</SelectItem>
+                    <SelectItem value="all">全部状态</SelectItem>
+                    <SelectItem value="completed">已完成</SelectItem>
+                    <SelectItem value="pending">待处理</SelectItem>
+                    <SelectItem value="failed">失败</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-indigo-900">Start Date</Label>
+                <Label className="text-indigo-900">开始日期</Label>
                 <Input
                   type="date"
                   value={startDate}
@@ -230,7 +230,7 @@ export default function AdminDashboard() {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-indigo-900">End Date</Label>
+                <Label className="text-indigo-900">结束日期</Label>
                 <Input
                   type="date"
                   value={endDate}
@@ -240,10 +240,10 @@ export default function AdminDashboard() {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-indigo-900">Export</Label>
+                <Label className="text-indigo-900">导出</Label>
                 <Button onClick={exportToCSV} className="w-full bg-green-600 hover:bg-green-700 text-white shadow-md">
                   <Download className="w-4 h-4 mr-2" />
-                  Export CSV
+                  导出 CSV
                 </Button>
               </div>
             </div>
@@ -253,13 +253,13 @@ export default function AdminDashboard() {
               <Table>
                 <TableHeader>
                   <TableRow className="border-indigo-200 hover:bg-indigo-50/50">
-                    <TableHead className="text-indigo-900 font-semibold">User</TableHead>
-                    <TableHead className="text-indigo-900 font-semibold">Amount</TableHead>
-                    <TableHead className="text-indigo-900 font-semibold">Hours</TableHead>
-                    <TableHead className="text-indigo-900 font-semibold">Status</TableHead>
-                    <TableHead className="text-indigo-900 font-semibold">Date</TableHead>
-                    <TableHead className="text-indigo-900 font-semibold">Affiliate</TableHead>
-                    <TableHead className="text-indigo-900 font-semibold">Order ID</TableHead>
+                    <TableHead className="text-indigo-900 font-semibold">用户</TableHead>
+                    <TableHead className="text-indigo-900 font-semibold">金额</TableHead>
+                    <TableHead className="text-indigo-900 font-semibold">小时数</TableHead>
+                    <TableHead className="text-indigo-900 font-semibold">状态</TableHead>
+                    <TableHead className="text-indigo-900 font-semibold">日期</TableHead>
+                    <TableHead className="text-indigo-900 font-semibold">分销商</TableHead>
+                    <TableHead className="text-indigo-900 font-semibold">订单号</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -301,7 +301,7 @@ export default function AdminDashboard() {
 
             {orders.length === 0 && (
               <div className="text-center py-8">
-                <p className="text-indigo-600">No orders found</p>
+                <p className="text-indigo-600">暂无订单记录</p>
               </div>
             )}
           </CardContent>
