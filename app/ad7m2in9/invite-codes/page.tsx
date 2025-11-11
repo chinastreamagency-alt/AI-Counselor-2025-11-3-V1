@@ -37,8 +37,8 @@ export default function InviteCodesPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const token = localStorage.getItem("adminToken")
-    if (!token) {
+    const admin = localStorage.getItem("admin")
+    if (!admin) {
       router.push("/ad7m2in9/login")
       return
     }
