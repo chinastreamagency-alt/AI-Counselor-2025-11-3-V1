@@ -5,6 +5,36 @@ import bcrypt from "bcryptjs"
 
 const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
+function formatError(error: unknown) {
+  if (error instanceof Error) {
+    return {
+      message: error.message,
+      details: error.stack ?? error.message,
+    }
+  }
+
+  if (typeof error === "object" && error !== null) {
+    try {
+      const serialized = JSON.stringify(error)
+      const parsed = error as { message?: string }
+      return {
+        message: parsed.message || serialized,
+        details: serialized,
+      }
+    } catch {
+      return {
+        message: String(error),
+        details: String(error),
+      }
+    }
+  }
+
+  return {
+    message: String(error),
+    details: String(error),
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { email, name, password, inviteCode } = await request.json()
@@ -124,11 +154,14 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error("[v0] Affiliate registration error:", error)
-    const errorMessage = error instanceof Error ? error.message : "Registration failed"
-    return NextResponse.json({ 
-      error: errorMessage,
-      details: error instanceof Error ? error.stack : String(error)
-    }, { status: 500 })
+    const formatted = formatError(error)
+    console.error("[v0] Affiliate registration error:", formatted)
+    return NextResponse.json(
+      {
+        error: formatted.message || "Registration failed",
+        details: formatted.details,
+      },
+      { status: 500 },
+    )
   }
 }
