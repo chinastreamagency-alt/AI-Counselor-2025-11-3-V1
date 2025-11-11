@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ArrowLeft, DollarSign, Plus, Trash2 } from "lucide-react"
+import { ArrowLeft, DollarSign, Plus, Trash2, Copy, CheckCircle, Link as LinkIcon } from "lucide-react"
 import Link from "next/link"
 
 type Affiliate = {
@@ -74,6 +74,7 @@ export default function AdminAffiliatesPage() {
   })
   const [isCreating, setIsCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
+  const [copiedLink, setCopiedLink] = useState<string | null>(null)
   
   const router = useRouter()
 
@@ -206,6 +207,14 @@ export default function AdminAffiliatesPage() {
     }
   }
 
+  const copyReferralLink = (referralCode: string) => {
+    const baseUrl = window.location.origin
+    const shortLink = `${baseUrl}/r/${referralCode}`
+    navigator.clipboard.writeText(shortLink)
+    setCopiedLink(referralCode)
+    setTimeout(() => setCopiedLink(null), 2000)
+  }
+
   const handleDeleteAffiliate = async (affiliateId: string, affiliateName: string) => {
     if (!confirm(`确定要删除分销商 "${affiliateName || '未命名'}" 吗？\n\n注意：如果该分销商有关联订单，将无法删除。`)) {
       return
@@ -309,6 +318,7 @@ export default function AdminAffiliatesPage() {
                   <TableRow className="border-indigo-200 hover:bg-indigo-50/50">
                     <TableHead className="text-indigo-900 font-semibold">分销商</TableHead>
                     <TableHead className="text-indigo-900 font-semibold">推荐码</TableHead>
+                    <TableHead className="text-indigo-900 font-semibold">短链接</TableHead>
                     <TableHead className="text-indigo-900 font-semibold">佣金比例</TableHead>
                     <TableHead className="text-indigo-900 font-semibold">总收入</TableHead>
                     <TableHead className="text-indigo-900 font-semibold">未结算</TableHead>
@@ -328,6 +338,20 @@ export default function AdminAffiliatesPage() {
                         </div>
                       </TableCell>
                       <TableCell className="text-indigo-900 font-mono">{affiliate.referral_code}</TableCell>
+                      <TableCell className="text-indigo-900">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => copyReferralLink(affiliate.referral_code)}
+                          className="text-indigo-600 border-indigo-300 hover:bg-indigo-50"
+                        >
+                          {copiedLink === affiliate.referral_code ? (
+                            <CheckCircle className="w-4 h-4 text-green-600" />
+                          ) : (
+                            <Copy className="w-4 h-4" />
+                          )}
+                        </Button>
+                      </TableCell>
                       <TableCell className="text-indigo-900">{affiliate.commission_rate}%</TableCell>
                       <TableCell className="text-indigo-900">${affiliate.total_commission.toFixed(2)}</TableCell>
                       <TableCell className="text-indigo-900 font-semibold">
@@ -437,7 +461,31 @@ export default function AdminAffiliatesPage() {
               <DialogTitle className="text-indigo-900">
                 {selectedAffiliate?.name || selectedAffiliate?.email} 的佣金记录
               </DialogTitle>
-              <DialogDescription className="text-indigo-700">管理并结算分销商佣金</DialogDescription>
+              <DialogDescription className="text-indigo-700">
+                <div className="space-y-2">
+                  <div>管理并结算分销商佣金</div>
+                  {selectedAffiliate && (
+                    <div className="flex items-center gap-2 mt-2 bg-indigo-50 p-2 rounded-lg">
+                      <LinkIcon className="w-4 h-4 text-indigo-600" />
+                      <span className="text-sm text-indigo-900 font-mono">
+                        {window.location.origin}/r/{selectedAffiliate.referral_code}
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => copyReferralLink(selectedAffiliate.referral_code)}
+                        className="ml-auto"
+                      >
+                        {copiedLink === selectedAffiliate.referral_code ? (
+                          <CheckCircle className="w-4 h-4 text-green-600" />
+                        ) : (
+                          <Copy className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4">
@@ -516,6 +564,122 @@ export default function AdminAffiliatesPage() {
                 </div>
               )}
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Create Affiliate Dialog */}
+        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+          <DialogContent className="bg-white border-indigo-200">
+            <DialogHeader>
+              <DialogTitle className="text-indigo-900">创建新分销商</DialogTitle>
+              <DialogDescription className="text-indigo-700">添加新的分销商账户</DialogDescription>
+            </DialogHeader>
+
+            <form onSubmit={handleCreateAffiliate} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="create-email" className="text-indigo-900">
+                  邮箱 *
+                </Label>
+                <Input
+                  id="create-email"
+                  type="email"
+                  value={createData.email}
+                  onChange={(e) => setCreateData({ ...createData, email: e.target.value })}
+                  required
+                  className="border-indigo-200"
+                  placeholder="affiliate@example.com"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="create-name" className="text-indigo-900">
+                  姓名（可选）
+                </Label>
+                <Input
+                  id="create-name"
+                  type="text"
+                  value={createData.name}
+                  onChange={(e) => setCreateData({ ...createData, name: e.target.value })}
+                  className="border-indigo-200"
+                  placeholder="分销商姓名"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="create-password" className="text-indigo-900">
+                  密码 *
+                </Label>
+                <Input
+                  id="create-password"
+                  type="password"
+                  value={createData.password}
+                  onChange={(e) => setCreateData({ ...createData, password: e.target.value })}
+                  required
+                  minLength={6}
+                  className="border-indigo-200"
+                  placeholder="至少6个字符"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="create-commission" className="text-indigo-900">
+                  佣金比例 (%) *
+                </Label>
+                <Input
+                  id="create-commission"
+                  type="number"
+                  value={createData.commissionRate}
+                  onChange={(e) => setCreateData({ ...createData, commissionRate: e.target.value })}
+                  required
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  className="border-indigo-200"
+                  placeholder="10"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="create-referral-code" className="text-indigo-900">
+                  自定义推荐码（可选）
+                </Label>
+                <Input
+                  id="create-referral-code"
+                  type="text"
+                  value={createData.customReferralCode}
+                  onChange={(e) => setCreateData({ ...createData, customReferralCode: e.target.value.toUpperCase() })}
+                  className="border-indigo-200 font-mono"
+                  placeholder="留空自动生成"
+                  maxLength={12}
+                />
+                <p className="text-xs text-indigo-600">留空将自动生成8位随机码</p>
+              </div>
+
+              {createError && (
+                <div className="bg-red-50 border border-red-300 rounded-lg p-3 text-red-700 text-sm">
+                  {createError}
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowCreateDialog(false)}
+                  disabled={isCreating}
+                  className="flex-1 border-indigo-300 text-indigo-700"
+                >
+                  取消
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isCreating}
+                  className="flex-1 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white"
+                >
+                  {isCreating ? "创建中..." : "创建分销商"}
+                </Button>
+              </div>
+            </form>
           </DialogContent>
         </Dialog>
       </div>
