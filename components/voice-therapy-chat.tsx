@@ -24,6 +24,7 @@ const FREE_TRIAL_DURATION = 60 // 1 minute free trial in seconds
 
 export default function VoiceTherapyChat() {
   const [user, setUser] = useState<{
+    id?: string
     email: string
     name: string
     image: string
@@ -73,9 +74,10 @@ export default function VoiceTherapyChat() {
       // 从服务器获取完整的用户信息
       fetch('/api/auth/custom-google/session')
         .then(res => res.json())
-        .then(session => {
+        .then(async (session) => {
           if (session.user) {
             const userData = {
+              id: session.user.id,
               email: session.user.email,
               name: session.user.name,
               image: session.user.image,
@@ -88,9 +90,27 @@ export default function VoiceTherapyChat() {
             setUser(userData)
             setIsLoggedIn(true)
             
-            const profile = loadUserProfile(userData.email)
-            setPurchasedHours(profile?.purchasedHours || 0)
-            setUsedMinutes(profile?.usedMinutes || 0)
+            // Fetch real-time hours from database
+            try {
+              const response = await fetch(`/api/user/hours?userId=${userData.id}`)
+              if (response.ok) {
+                const data = await response.json()
+                setPurchasedHours(data.totalHours || 0)
+                setUsedMinutes(data.usedMinutes || 0)
+                console.log("[Google Login] Loaded user hours from database:", data)
+              } else {
+                // Fallback to localStorage
+                const profile = loadUserProfile(userData.email)
+                setPurchasedHours(profile?.purchasedHours || 0)
+                setUsedMinutes(profile?.usedMinutes || 0)
+              }
+            } catch (error) {
+              console.error("[Google Login] Error fetching user hours:", error)
+              // Fallback to localStorage
+              const profile = loadUserProfile(userData.email)
+              setPurchasedHours(profile?.purchasedHours || 0)
+              setUsedMinutes(profile?.usedMinutes || 0)
+            }
             
             // 清除 URL 参数
             window.history.replaceState({}, document.title, window.location.pathname)
@@ -108,9 +128,35 @@ export default function VoiceTherapyChat() {
           setUser(parsedUser)
           setIsLoggedIn(true)
 
-          const profile = loadUserProfile(parsedUser.email)
-          setPurchasedHours(profile?.purchasedHours || 0)
-          setUsedMinutes(profile?.usedMinutes || 0)
+          // Fetch real-time hours from database
+          if (parsedUser.id) {
+            fetch(`/api/user/hours?userId=${parsedUser.id}`)
+              .then(res => res.json())
+              .then(data => {
+                if (data.success) {
+                  setPurchasedHours(data.totalHours || 0)
+                  setUsedMinutes(data.usedMinutes || 0)
+                  console.log("[Load User] Loaded hours from database:", data)
+                } else {
+                  // Fallback to localStorage
+                  const profile = loadUserProfile(parsedUser.email)
+                  setPurchasedHours(profile?.purchasedHours || 0)
+                  setUsedMinutes(profile?.usedMinutes || 0)
+                }
+              })
+              .catch(error => {
+                console.error("[Load User] Error fetching hours:", error)
+                // Fallback to localStorage
+                const profile = loadUserProfile(parsedUser.email)
+                setPurchasedHours(profile?.purchasedHours || 0)
+                setUsedMinutes(profile?.usedMinutes || 0)
+              })
+          } else {
+            // Old user data without ID, use localStorage
+            const profile = loadUserProfile(parsedUser.email)
+            setPurchasedHours(profile?.purchasedHours || 0)
+            setUsedMinutes(profile?.usedMinutes || 0)
+          }
         } catch (error) {
           console.error("Error parsing stored user:", error)
         }
@@ -120,19 +166,27 @@ export default function VoiceTherapyChat() {
 
   // 监听购买完成事件，自动刷新用户时长
   useEffect(() => {
-    const handlePurchaseCompleted = (event: CustomEvent) => {
+    const handlePurchaseCompleted = async (event: CustomEvent) => {
       console.log("[Purchase] Detected purchase completion, refreshing user hours...")
-      if (user?.email) {
-        const profile = loadUserProfile(user.email)
-        setPurchasedHours(profile?.purchasedHours || 0)
-        console.log("[Purchase] Updated hours to:", profile?.purchasedHours)
+      if (user?.id) {
+        try {
+          const response = await fetch(`/api/user/hours?userId=${user.id}`)
+          if (response.ok) {
+            const data = await response.json()
+            setPurchasedHours(data.totalHours || 0)
+            setUsedMinutes(data.usedMinutes || 0)
+            console.log("[Purchase] Updated hours from database:", data)
+          }
+        } catch (error) {
+          console.error("[Purchase] Error fetching updated hours:", error)
+        }
       }
     }
 
-    window.addEventListener('purchaseCompleted', handlePurchaseCompleted as EventListener)
+    window.addEventListener('purchaseCompleted', handlePurchaseCompleted as unknown as EventListener)
     
     return () => {
-      window.removeEventListener('purchaseCompleted', handlePurchaseCompleted as EventListener)
+      window.removeEventListener('purchaseCompleted', handlePurchaseCompleted as unknown as EventListener)
     }
   }, [user])
 
@@ -594,6 +648,17 @@ export default function VoiceTherapyChat() {
   )
 
   const startSession = useCallback(() => {
+    // Check if logged-in user has remaining time
+    if (isLoggedIn) {
+      const remainingMinutes = purchasedHours * 60 - usedMinutes
+      if (remainingMinutes <= 0) {
+        console.log("[Start Session] No remaining time, showing payment modal")
+        setSessionEndReason("Your time has run out. Please purchase more hours to continue.")
+        setShowPaymentModal(true)
+        return
+      }
+    }
+
     const sessionId = Date.now().toString()
     setCurrentSessionId(sessionId)
     setSessionStartTime(new Date())
@@ -624,7 +689,7 @@ export default function VoiceTherapyChat() {
     } else {
       startListening()
     }
-  }, [isAudioEnabled, speakText, startListening, isLoggedIn])
+  }, [isAudioEnabled, speakText, startListening, isLoggedIn, purchasedHours, usedMinutes])
 
   const stopSession = useCallback(() => {
     shouldListenRef.current = false
@@ -684,16 +749,34 @@ export default function VoiceTherapyChat() {
     setSessionStartTime(null)
   }, [currentSessionId, sessionStartTime, sessionDuration, messages, user])
 
-  const handleLogin = useCallback((email: string) => {
+  const handleLogin = useCallback(async (email: string) => {
     const storedUser = localStorage.getItem("user")
     if (storedUser) {
       const parsedUser = JSON.parse(storedUser)
       setUser(parsedUser)
       setIsLoggedIn(true)
 
-      const profile = loadUserProfile(parsedUser.email)
-      setPurchasedHours(profile?.purchasedHours || 0)
-      setUsedMinutes(profile?.usedMinutes || 0)
+      // Fetch real-time hours from database
+      try {
+        const response = await fetch(`/api/user/hours?userId=${parsedUser.id}`)
+        if (response.ok) {
+          const data = await response.json()
+          setPurchasedHours(data.totalHours || 0)
+          setUsedMinutes(data.usedMinutes || 0)
+          console.log("[Login] Loaded user hours from database:", data)
+        } else {
+          // Fallback to localStorage
+          const profile = loadUserProfile(parsedUser.email)
+          setPurchasedHours(profile?.purchasedHours || 0)
+          setUsedMinutes(profile?.usedMinutes || 0)
+        }
+      } catch (error) {
+        console.error("[Login] Error fetching user hours:", error)
+        // Fallback to localStorage
+        const profile = loadUserProfile(parsedUser.email)
+        setPurchasedHours(profile?.purchasedHours || 0)
+        setUsedMinutes(profile?.usedMinutes || 0)
+      }
 
       setFreeTrialEnded(false)
       setFreeTrialActive(false)

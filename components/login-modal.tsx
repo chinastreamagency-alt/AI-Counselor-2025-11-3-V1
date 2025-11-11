@@ -61,6 +61,7 @@ export function LoginModal({ isOpen, onClose, onLogin, onSocialLogin, message }:
 
         // 注册成功，自动登录
         const userData = {
+          id: data.user.id,
           email: data.user.email,
           name: data.user.name || email.split("@")[0],
           image: "",
@@ -93,6 +94,7 @@ export function LoginModal({ isOpen, onClose, onLogin, onSocialLogin, message }:
 
         // 登录成功
         const userData = {
+          id: data.user.id,
           email: data.user.email,
           name: data.user.name || email.split("@")[0],
           image: "",
