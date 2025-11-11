@@ -125,6 +125,10 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error("[v0] Affiliate registration error:", error)
-    return NextResponse.json({ error: "Registration failed" }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : "Registration failed"
+    return NextResponse.json({ 
+      error: errorMessage,
+      details: error instanceof Error ? error.stack : String(error)
+    }, { status: 500 })
   }
 }
