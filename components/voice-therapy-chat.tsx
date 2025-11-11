@@ -144,7 +144,7 @@ export default function VoiceTherapyChat() {
             // 免费试用到期，立即停止会话
             setFreeTrialEnded(true)
             setFreeTrialActive(false)
-            setSessionEndReason("免费试用已结束，请登录后继续使用")
+            setSessionEndReason("Your free trial has ended. Please sign in to continue.")
             setShowLoginModal(true)
             // 停止会话的逻辑将由下面的 useEffect 处理
             return 0
@@ -286,7 +286,7 @@ export default function VoiceTherapyChat() {
 
           setCurrentSessionId(null)
           setSessionStartTime(null)
-          setSessionEndReason("时长已用完，请充值后继续使用")
+          setSessionEndReason("Your time has run out. Please purchase more hours to continue.")
           setShowPaymentModal(true)
         }
         performStop()
@@ -301,6 +301,7 @@ export default function VoiceTherapyChat() {
       recognitionRef.current.continuous = true
       recognitionRef.current.interimResults = true
       recognitionRef.current.lang = "en-US"
+      recognitionRef.current.maxAlternatives = 3  // Request multiple alternatives for better accuracy
 
       recognitionRef.current.onresult = (event: any) => {
         if (isAISpeakingRef.current) {
@@ -472,7 +473,7 @@ export default function VoiceTherapyChat() {
         const remainingMinutes = (purchasedHours * 60) - usedMinutes
         if (remainingMinutes <= 0) {
           stopSession()
-          setSessionEndReason("时长已用完，请充值后继续使用")
+          setSessionEndReason("Your time has run out. Please purchase more hours to continue.")
           setShowPaymentModal(true)
           return
         }

@@ -2,6 +2,8 @@
 
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { signIn } from "next-auth/react"
 import { useState } from "react"
 
@@ -16,6 +18,97 @@ interface LoginModalProps {
 export function LoginModal({ isOpen, onClose, onLogin, onSocialLogin, message }: LoginModalProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isSignUp, setIsSignUp] = useState(false)
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [name, setName] = useState("")
+
+  const handleEmailAuth = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+
+    if (!email || !password) {
+      setError("Please fill in all required fields")
+      return
+    }
+
+    if (isSignUp) {
+      // 注册
+      if (password !== confirmPassword) {
+        setError("Passwords do not match")
+        return
+      }
+
+      if (password.length < 6) {
+        setError("Password must be at least 6 characters")
+        return
+      }
+
+      try {
+        setIsLoading(true)
+        const response = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password, name }),
+        })
+
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.error || "Registration failed")
+        }
+
+        // 注册成功，自动登录
+        const userData = {
+          email: data.user.email,
+          name: data.user.name || email.split("@")[0],
+          image: "",
+          provider: "email",
+          sessionCount: 0,
+        }
+        localStorage.setItem("user", JSON.stringify(userData))
+        onLogin(email)
+        onClose()
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Registration failed")
+      } finally {
+        setIsLoading(false)
+      }
+    } else {
+      // 登录
+      try {
+        setIsLoading(true)
+        const response = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        })
+
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.error || "Login failed")
+        }
+
+        // 登录成功
+        const userData = {
+          email: data.user.email,
+          name: data.user.name || email.split("@")[0],
+          image: "",
+          provider: "email",
+          sessionCount: 0,
+        }
+        localStorage.setItem("user", JSON.stringify(userData))
+        onLogin(email)
+        onClose()
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Login failed")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+  }
 
   const handleGoogleLogin = async () => {
     try {
@@ -27,7 +120,7 @@ export function LoginModal({ isOpen, onClose, onLogin, onSocialLogin, message }:
       // 使用完全自定义的 OAuth 流程
       window.location.href = "/api/auth/custom-google/login"
     } catch (err) {
-      setError("网络错误，请检查连接后重试")
+      setError("Network error, please check your connection and try again")
       console.error("[Google Login Exception]", err)
       setIsLoading(false)
     }
@@ -37,7 +130,9 @@ export function LoginModal({ isOpen, onClose, onLogin, onSocialLogin, message }:
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-semibold text-center">Continue Your Journey</DialogTitle>
+          <DialogTitle className="text-2xl font-semibold text-center">
+            {isSignUp ? "Create Account" : "Welcome Back"}
+          </DialogTitle>
           <DialogDescription className="text-center pt-2">
             {message || "Sign in to save progress and purchase talk time"}
           </DialogDescription>
@@ -50,6 +145,80 @@ export function LoginModal({ isOpen, onClose, onLogin, onSocialLogin, message }:
             </div>
           )}
 
+          {/* Email/Password Form */}
+          <form onSubmit={handleEmailAuth} className="space-y-4">
+            {isSignUp && (
+              <div className="space-y-2">
+                <Label htmlFor="name">Name (Optional)</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="Your name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  disabled={isLoading}
+                />
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="email">Email *</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="your@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={isLoading}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Password *</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="At least 6 characters"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+                disabled={isLoading}
+              />
+            </div>
+
+            {isSignUp && (
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm Password *</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  placeholder="Re-enter password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  disabled={isLoading}
+                />
+              </div>
+            )}
+
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "Processing..." : isSignUp ? "Sign Up" : "Sign In"}
+            </Button>
+          </form>
+
+          {/* Divider */}
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+            </div>
+          </div>
+
+          {/* Google Login */}
           <Button
             onClick={handleGoogleLogin}
             disabled={isLoading}
@@ -77,7 +246,22 @@ export function LoginModal({ isOpen, onClose, onLogin, onSocialLogin, message }:
             {isLoading ? "Signing in..." : "Sign in with Google"}
           </Button>
 
-          <p className="text-xs text-muted-foreground text-center pt-2">
+          {/* Toggle between Sign In/Sign Up */}
+          <div className="text-center text-sm">
+            <button
+              type="button"
+              onClick={() => {
+                setIsSignUp(!isSignUp)
+                setError(null)
+              }}
+              className="text-primary hover:underline"
+              disabled={isLoading}
+            >
+              {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Sign up"}
+            </button>
+          </div>
+
+          <p className="text-xs text-muted-foreground text-center">
             By continuing, you agree to our Terms of Service and Privacy Policy
           </p>
         </div>
