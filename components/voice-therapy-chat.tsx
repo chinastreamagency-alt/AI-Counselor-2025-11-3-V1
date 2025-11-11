@@ -144,9 +144,9 @@ export default function VoiceTherapyChat() {
             // 免费试用到期，立即停止会话
             setFreeTrialEnded(true)
             setFreeTrialActive(false)
-            stopSession()
             setSessionEndReason("免费试用已结束，请登录后继续使用")
             setShowLoginModal(true)
+            // 停止会话的逻辑将由下面的 useEffect 处理
             return 0
           }
           return prev - 1
@@ -159,7 +159,140 @@ export default function VoiceTherapyChat() {
         }
       }
     }
-  }, [freeTrialActive, isLoggedIn, freeTrialTimeLeft, stopSession])
+  }, [freeTrialActive, isLoggedIn, freeTrialTimeLeft])
+
+  // 监控会话时长，自动停止超时会话
+  useEffect(() => {
+    if (!currentSessionId || status === "idle") return
+
+    // 检查免费试用是否到期
+    if (!isLoggedIn && freeTrialEnded) {
+      // 使用 stopSession 函数停止会话
+      const performStop = async () => {
+        shouldListenRef.current = false
+        isAISpeakingRef.current = false
+
+        if (recognitionRef.current) {
+          try {
+            recognitionRef.current.stop()
+          } catch (e) {
+            console.error("[v0] Error stopping recognition:", e)
+          }
+        }
+
+        if (audioRef.current) {
+          audioRef.current.pause()
+          audioRef.current.currentTime = 0
+        }
+
+        if (sessionTimerRef.current) {
+          clearInterval(sessionTimerRef.current)
+        }
+
+        if (freeTrialTimerRef.current) {
+          clearInterval(freeTrialTimerRef.current)
+        }
+
+        setStatus("idle")
+        setCurrentSpeaker(null)
+        setCurrentText("")
+        setFreeTrialActive(false)
+
+        if (currentSessionId && sessionStartTime && messages.length > 0) {
+          const session: TherapySession = {
+            id: currentSessionId,
+            startTime: sessionStartTime,
+            endTime: new Date(),
+            duration: sessionDuration,
+            messages,
+            userEmail: user?.email || "guest",
+          }
+          saveSession(session)
+
+          if (user) {
+            const profile = loadUserProfile(user.email)
+            const newUsedMinutes = (profile?.usedMinutes || 0) + Math.ceil(sessionDuration / 60)
+            saveUserProfile({
+              ...profile,
+              userId: user.email,
+              usedMinutes: newUsedMinutes,
+              sessionCount: (profile?.sessionCount || 0) + 1,
+            })
+            setUsedMinutes(newUsedMinutes)
+          }
+        }
+
+        setCurrentSessionId(null)
+        setSessionStartTime(null)
+      }
+      performStop()
+      return
+    }
+
+    // 检查付费用户时长
+    if (isLoggedIn && user && sessionDuration > 0) {
+      const currentSessionMinutes = Math.ceil(sessionDuration / 60)
+      const totalUsedMinutes = usedMinutes + currentSessionMinutes
+      const remainingMinutes = (purchasedHours * 60) - totalUsedMinutes
+
+      if (remainingMinutes <= 0) {
+        // 时长用完，停止会话
+        const performStop = async () => {
+          shouldListenRef.current = false
+          isAISpeakingRef.current = false
+
+          if (recognitionRef.current) {
+            try {
+              recognitionRef.current.stop()
+            } catch (e) {
+              console.error("[v0] Error stopping recognition:", e)
+            }
+          }
+
+          if (audioRef.current) {
+            audioRef.current.pause()
+            audioRef.current.currentTime = 0
+          }
+
+          if (sessionTimerRef.current) {
+            clearInterval(sessionTimerRef.current)
+          }
+
+          setStatus("idle")
+          setCurrentSpeaker(null)
+          setCurrentText("")
+
+          if (currentSessionId && sessionStartTime && messages.length > 0) {
+            const session: TherapySession = {
+              id: currentSessionId,
+              startTime: sessionStartTime,
+              endTime: new Date(),
+              duration: sessionDuration,
+              messages,
+              userEmail: user?.email || "guest",
+            }
+            saveSession(session)
+
+            const profile = loadUserProfile(user.email)
+            const newUsedMinutes = (profile?.usedMinutes || 0) + Math.ceil(sessionDuration / 60)
+            saveUserProfile({
+              ...profile,
+              userId: user.email,
+              usedMinutes: newUsedMinutes,
+              sessionCount: (profile?.sessionCount || 0) + 1,
+            })
+            setUsedMinutes(newUsedMinutes)
+          }
+
+          setCurrentSessionId(null)
+          setSessionStartTime(null)
+          setSessionEndReason("时长已用完，请充值后继续使用")
+          setShowPaymentModal(true)
+        }
+        performStop()
+      }
+    }
+  }, [sessionDuration, freeTrialEnded, isLoggedIn, user, purchasedHours, usedMinutes, currentSessionId, sessionStartTime, messages, status])
 
   useEffect(() => {
     if (typeof window !== "undefined" && "webkitSpeechRecognition" in window) {
@@ -426,7 +559,7 @@ export default function VoiceTherapyChat() {
         startListening()
       }
     },
-    [messages, currentSessionId, isAudioEnabled, speakText, startListening, isLoggedIn, freeTrialEnded, user, purchasedHours, usedMinutes, stopSession],
+    [messages, currentSessionId, isAudioEnabled, speakText, startListening, isLoggedIn, freeTrialEnded, user, purchasedHours, usedMinutes],
   )
 
   const startSession = useCallback(() => {
@@ -443,34 +576,7 @@ export default function VoiceTherapyChat() {
     }
 
     sessionTimerRef.current = setInterval(() => {
-      setSessionDuration((prev) => {
-        const newDuration = prev + 1
-        
-        // 每秒检查时长限制
-        if (!isLoggedIn && freeTrialEnded) {
-          // 免费试用到期
-          stopSession()
-          setShowLoginModal(true)
-          return newDuration
-        }
-        
-        if (isLoggedIn && user) {
-          // 计算已用分钟数（包括当前会话）
-          const currentSessionMinutes = Math.ceil(newDuration / 60)
-          const totalUsedMinutes = usedMinutes + currentSessionMinutes
-          const remainingMinutes = (purchasedHours * 60) - totalUsedMinutes
-          
-          if (remainingMinutes <= 0) {
-            // 时长用完
-            stopSession()
-            setSessionEndReason("时长已用完，请充值后继续使用")
-            setShowPaymentModal(true)
-            return newDuration
-          }
-        }
-        
-        return newDuration
-      })
+      setSessionDuration((prev) => prev + 1)
     }, 1000)
 
     const greeting = "Hello, I'm your AI counselor. How are you feeling today?"
