@@ -28,6 +28,8 @@ export default function InviteCodesPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
+  const [needsSetup, setNeedsSetup] = useState(false)
+  const [isInitializing, setIsInitializing] = useState(false)
 
   // 创建表单状态
   const [newCode, setNewCode] = useState("")
@@ -52,11 +54,41 @@ export default function InviteCodesPage() {
 
       if (data.success) {
         setInviteCodes(data.inviteCodes)
+        setNeedsSetup(false)
+      } else if (data.error?.includes("does not exist")) {
+        setNeedsSetup(true)
       }
     } catch (error) {
       console.error("获取邀请码失败:", error)
+      setNeedsSetup(true)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleInitializeDatabase = async () => {
+    setIsInitializing(true)
+    setError(null)
+    
+    try {
+      const response = await fetch("/api/ad7m2in9/setup-database", {
+        method: "POST"
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        setNeedsSetup(false)
+        fetchInviteCodes()
+      } else if (data.needsManualSetup) {
+        setError("需要手动初始化：请在 Supabase SQL 编辑器中执行 COMPLETE_DATABASE_SETUP.sql 脚本")
+      } else {
+        setError(data.message || "初始化失败")
+      }
+    } catch (error) {
+      setError("初始化失败，请手动执行 SQL 脚本")
+    } finally {
+      setIsInitializing(false)
     }
   }
 
@@ -256,6 +288,35 @@ export default function InviteCodesPage() {
           </Card>
         )}
 
+        {/* 数据库初始化提示 */}
+        {needsSetup && (
+          <Card className="mb-6 bg-yellow-50 border-yellow-300 shadow-xl">
+            <CardHeader>
+              <CardTitle className="text-yellow-900">⚠️ 需要初始化数据库</CardTitle>
+              <CardDescription className="text-yellow-700">
+                邀请码表还未创建，请点击下方按钮自动初始化
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                onClick={handleInitializeDatabase}
+                disabled={isInitializing}
+                className="bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700"
+              >
+                {isInitializing ? "初始化中..." : "🚀 一键初始化数据库"}
+              </Button>
+              {error && (
+                <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-3">
+                  <p className="text-red-700 text-sm">{error}</p>
+                  <p className="text-red-600 text-xs mt-2">
+                    请在 Supabase Dashboard 的 SQL 编辑器中执行项目根目录的 COMPLETE_DATABASE_SETUP.sql 文件
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* 邀请码列表 */}
         <Card className="bg-white/90 backdrop-blur-md border-indigo-200 shadow-xl">
           <CardHeader>
@@ -267,6 +328,10 @@ export default function InviteCodesPage() {
           <CardContent>
             {isLoading ? (
               <div className="text-center py-8 text-indigo-600">加载中...</div>
+            ) : needsSetup ? (
+              <div className="text-center py-8 text-yellow-600">
+                请先初始化数据库
+              </div>
             ) : inviteCodes.length === 0 ? (
               <div className="text-center py-8 text-indigo-600">
                 还没有邀请码，点击上方按钮创建第一个邀请码

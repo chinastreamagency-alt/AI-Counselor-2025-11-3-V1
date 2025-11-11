@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ArrowLeft, DollarSign } from "lucide-react"
+import { ArrowLeft, DollarSign, Plus, Trash2 } from "lucide-react"
 import Link from "next/link"
 
 type Affiliate = {
@@ -62,6 +62,19 @@ export default function AdminAffiliatesPage() {
   const [editingAffiliate, setEditingAffiliate] = useState<Affiliate | null>(null)
   const [newCommissionRate, setNewCommissionRate] = useState("")
   const [newStatus, setNewStatus] = useState("")
+  
+  // 创建分销商状态
+  const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [createData, setCreateData] = useState({
+    email: "",
+    name: "",
+    password: "",
+    commissionRate: "10",
+    customReferralCode: "",
+  })
+  const [isCreating, setIsCreating] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
+  
   const router = useRouter()
 
   useEffect(() => {
@@ -158,10 +171,62 @@ export default function AdminAffiliatesPage() {
       setEditingAffiliate(null)
       setNewCommissionRate("")
       setNewStatus("")
-      alert("Affiliate updated successfully!")
+      alert("分销商更新成功!")
     } catch (error) {
       console.error("[v0] Error updating affiliate:", error)
-      alert("Failed to update affiliate")
+      alert("更新分销商失败")
+    }
+  }
+
+  const handleCreateAffiliate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsCreating(true)
+    setCreateError(null)
+
+    try {
+      const response = await fetch("/api/ad7m2in9/create-affiliate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(createData),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "创建失败")
+      }
+
+      setShowCreateDialog(false)
+      fetchAffiliates()
+      alert("分销商创建成功！")
+    } catch (error) {
+      setCreateError(error instanceof Error ? error.message : "创建分销商失败")
+    } finally {
+      setIsCreating(false)
+    }
+  }
+
+  const handleDeleteAffiliate = async (affiliateId: string, affiliateName: string) => {
+    if (!confirm(`确定要删除分销商 "${affiliateName || '未命名'}" 吗？\n\n注意：如果该分销商有关联订单，将无法删除。`)) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/ad7m2in9/delete-affiliate?id=${affiliateId}`, {
+        method: "DELETE",
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        alert(data.error + (data.suggestion ? `\n\n${data.suggestion}` : ""))
+        return
+      }
+
+      fetchAffiliates()
+      alert("分销商删除成功！")
+    } catch (error) {
+      alert("删除失败：" + (error instanceof Error ? error.message : "未知错误"))
     }
   }
 
@@ -183,17 +248,36 @@ export default function AdminAffiliatesPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-100 to-purple-50 p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <Button asChild variant="outline" className="bg-white border-indigo-300 text-indigo-700 hover:bg-indigo-50">
-            <Link href="/ad7m2in9">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              返回控制台
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-4xl font-bold text-indigo-900">分销商管理</h1>
-            <p className="text-indigo-700">管理分销商并结算佣金</p>
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <Button asChild variant="outline" className="bg-white border-indigo-300 text-indigo-700 hover:bg-indigo-50">
+              <Link href="/ad7m2in9">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                返回控制台
+              </Link>
+            </Button>
+            <div>
+              <h1 className="text-4xl font-bold text-indigo-900">分销商管理</h1>
+              <p className="text-indigo-700">管理分销商并结算佣金</p>
+            </div>
           </div>
+          <Button
+            onClick={() => {
+              setShowCreateDialog(true)
+              setCreateData({
+                email: "",
+                name: "",
+                password: "",
+                commissionRate: "10",
+                customReferralCode: "",
+              })
+              setCreateError(null)
+            }}
+            className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            添加分销商
+          </Button>
         </div>
 
         {/* Filters */}
