@@ -26,7 +26,7 @@ export async function POST(req: Request) {
       })
     }
 
-    const result = streamText({
+    const result = await streamText({
       model: openai("gpt-4o-mini"),
       system: systemPrompt,
       messages,
@@ -34,9 +34,21 @@ export async function POST(req: Request) {
       maxTokens: 150, // Keep responses concise for voice
     })
 
-    console.log("[v0] Streaming AI response...")
+    // 等待流式响应完成并获取完整文本
+    const fullText = await result.text
 
-    return result.toUIMessageStreamResponse()
+    console.log("[v0] AI response generated:", fullText.substring(0, 50) + "...")
+
+    // 返回普通 JSON 响应（兼容前端代码）
+    return new Response(
+      JSON.stringify({
+        message: fullText,
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }
+    )
   } catch (error) {
     console.error("[v0] Error in chat API:", error)
     return new Response(
