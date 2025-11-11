@@ -138,9 +138,9 @@ export async function POST(request: NextRequest) {
 
     console.log("[v0] Affiliate created:", affiliate.id, "Code:", referralCode)
 
-    // Generate referral link
+    // Generate short referral link
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin
-    const referralLink = `${baseUrl}/payment?ref=${referralCode}`
+    const referralLink = `${baseUrl}/r/${referralCode}`
 
     return NextResponse.json({
       success: true,

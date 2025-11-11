@@ -62,6 +62,7 @@ export async function GET(request: NextRequest) {
       totalRevenue,
       commissionRate: affiliateData.commission_rate,
       referralCode: affiliateData.referral_code,
+      totalClicks: affiliateData.total_clicks || 0,
     })
   } catch (error) {
     console.error("[v0] Error fetching affiliate stats:", error)

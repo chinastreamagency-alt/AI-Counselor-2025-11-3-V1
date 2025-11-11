@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
-import { DollarSign, ShoppingCart, TrendingUp, Copy, CheckCircle, LogOut, LinkIcon } from "lucide-react"
+import { DollarSign, ShoppingCart, TrendingUp, Copy, CheckCircle, LogOut, LinkIcon, MousePointerClick } from "lucide-react"
 
 type Order = {
   id: string
@@ -54,6 +54,7 @@ type Stats = {
   totalRevenue: number
   commissionRate: number
   referralCode: string
+  totalClicks: number
 }
 
 export default function AffiliateDashboard() {
@@ -125,7 +126,7 @@ export default function AffiliateDashboard() {
   const copyReferralLink = () => {
     if (stats?.referralCode) {
       const baseUrl = window.location.origin
-      const referralLink = `${baseUrl}/payment?ref=${stats.referralCode}`
+      const referralLink = `${baseUrl}/r/${stats.referralCode}`
       navigator.clipboard.writeText(referralLink)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
@@ -141,7 +142,7 @@ export default function AffiliateDashboard() {
   }
 
   const referralLink = stats?.referralCode
-    ? `${typeof window !== "undefined" ? window.location.origin : ""}/payment?ref=${stats.referralCode}`
+    ? `${typeof window !== "undefined" ? window.location.origin : ""}/r/${stats.referralCode}`
     : ""
 
   return (
@@ -224,6 +225,19 @@ export default function AffiliateDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-white">{stats.totalOrders}</div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white/10 backdrop-blur-md border-white/20">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-white/70">Link Clicks</CardTitle>
+                <MousePointerClick className="w-4 h-4 text-purple-400" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-white">{stats.totalClicks || 0}</div>
+                <p className="text-xs text-white/50 mt-1">
+                  {stats.totalOrders > 0 ? `${((stats.totalOrders / (stats.totalClicks || 1)) * 100).toFixed(1)}% conversion` : "No conversions yet"}
+                </p>
               </CardContent>
             </Card>
           </div>

@@ -312,6 +312,7 @@ export default function AdminAffiliatesPage() {
                     <TableHead className="text-indigo-900 font-semibold">佣金比例</TableHead>
                     <TableHead className="text-indigo-900 font-semibold">总收入</TableHead>
                     <TableHead className="text-indigo-900 font-semibold">未结算</TableHead>
+                    <TableHead className="text-indigo-900 font-semibold">点击数</TableHead>
                     <TableHead className="text-indigo-900 font-semibold">订单数</TableHead>
                     <TableHead className="text-indigo-900 font-semibold">状态</TableHead>
                     <TableHead className="text-indigo-900 font-semibold">操作</TableHead>
@@ -331,6 +332,9 @@ export default function AdminAffiliatesPage() {
                       <TableCell className="text-indigo-900">${affiliate.total_commission.toFixed(2)}</TableCell>
                       <TableCell className="text-indigo-900 font-semibold">
                         ${affiliate.unsettled_commission.toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-indigo-900 font-semibold text-blue-600">
+                        {affiliate.total_clicks || 0}
                       </TableCell>
                       <TableCell className="text-indigo-900">{affiliate.orderCount}</TableCell>
                       <TableCell>
