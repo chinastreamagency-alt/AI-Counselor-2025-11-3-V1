@@ -1,5 +1,5 @@
 import { openai } from "@ai-sdk/openai"
-import { streamText } from "ai"
+import { generateText } from "ai"
 
 export const maxDuration = 30
 
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
       })
     }
 
-    const result = await streamText({
+    const result = await generateText({
       model: openai("gpt-4o-mini"),
       system: systemPrompt,
       messages,
@@ -34,21 +34,12 @@ export async function POST(req: Request) {
       maxTokens: 150, // Keep responses concise for voice
     })
 
-    // 等待流式响应完成并获取完整文本
-    const fullText = await result.text
-
-    console.log("[v0] AI response generated:", fullText.substring(0, 50) + "...")
+    console.log("[v0] AI response generated:", result.text.substring(0, 50) + "...")
 
     // 返回普通 JSON 响应（兼容前端代码）
-    return new Response(
-      JSON.stringify({
-        message: fullText,
-      }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }
-    )
+    return Response.json({
+      message: result.text,
+    })
   } catch (error) {
     console.error("[v0] Error in chat API:", error)
     return new Response(

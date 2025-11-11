@@ -362,6 +362,8 @@ export default function VoiceTherapyChat() {
       try {
         const lastSummary = currentSessionId ? getLastConversationSummary(currentSessionId) : null
 
+        console.log("[v0] Sending to AI:", text)
+
         const response = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -371,11 +373,22 @@ export default function VoiceTherapyChat() {
           }),
         })
 
+        console.log("[v0] API Response status:", response.status)
+
         if (!response.ok) {
-          throw new Error("Failed to get AI response")
+          const errorText = await response.text()
+          console.error("[v0] API Error response:", errorText)
+          throw new Error(`Failed to get AI response: ${response.status}`)
         }
 
         const data = await response.json()
+        console.log("[v0] AI Response received:", data)
+
+        if (!data.message) {
+          console.error("[v0] No message in response:", data)
+          throw new Error("Invalid response format")
+        }
+
         const aiMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: "assistant",
@@ -384,6 +397,7 @@ export default function VoiceTherapyChat() {
         }
 
         setMessages((prev) => [...prev, aiMessage])
+        console.log("[v0] Message added, will speak:", data.message)
 
         if (isAudioEnabled) {
           await speakText(data.message)
@@ -392,6 +406,7 @@ export default function VoiceTherapyChat() {
         }
       } catch (error) {
         console.error("[v0] Error processing speech:", error)
+        console.error("[v0] Error details:", error instanceof Error ? error.message : String(error))
         setStatus("idle")
         startListening()
       }
