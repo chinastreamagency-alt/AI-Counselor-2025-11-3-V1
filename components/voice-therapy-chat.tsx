@@ -141,12 +141,42 @@ export default function VoiceTherapyChat() {
       freeTrialTimerRef.current = setInterval(() => {
         setFreeTrialTimeLeft((prev) => {
           if (prev <= 1) {
-            // 免费试用到期，立即停止会话
+            // 免费试用到期，立即停止所有活动
             setFreeTrialEnded(true)
             setFreeTrialActive(false)
+            
+            // 立即停止音频播放
+            if (audioRef.current) {
+              audioRef.current.pause()
+              audioRef.current.currentTime = 0
+            }
+            
+            // 立即停止语音识别
+            shouldListenRef.current = false
+            isAISpeakingRef.current = false
+            if (recognitionRef.current) {
+              try {
+                recognitionRef.current.stop()
+              } catch (e) {
+                console.error("[v0] Error stopping recognition:", e)
+              }
+            }
+            
+            // 停止所有定时器
+            if (sessionTimerRef.current) {
+              clearInterval(sessionTimerRef.current)
+            }
+            if (userSpeakingTimerRef.current) {
+              clearInterval(userSpeakingTimerRef.current)
+            }
+            
+            // 更新UI状态
+            setStatus("idle")
+            setCurrentSpeaker(null)
+            setCurrentText("")
             setSessionEndReason("Your free trial has ended. Please sign in to continue.")
             setShowLoginModal(true)
-            // 停止会话的逻辑将由下面的 useEffect 处理
+            
             return 0
           }
           return prev - 1
