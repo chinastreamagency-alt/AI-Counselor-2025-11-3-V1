@@ -141,10 +141,12 @@ export default function VoiceTherapyChat() {
       freeTrialTimerRef.current = setInterval(() => {
         setFreeTrialTimeLeft((prev) => {
           if (prev <= 1) {
+            // 免费试用到期，立即停止会话
             setFreeTrialEnded(true)
             setFreeTrialActive(false)
-            setShowLoginModal(true)
             stopSession()
+            setSessionEndReason("免费试用已结束，请登录后继续使用")
+            setShowLoginModal(true)
             return 0
           }
           return prev - 1
@@ -157,7 +159,7 @@ export default function VoiceTherapyChat() {
         }
       }
     }
-  }, [freeTrialActive, isLoggedIn, freeTrialTimeLeft])
+  }, [freeTrialActive, isLoggedIn, freeTrialTimeLeft, stopSession])
 
   useEffect(() => {
     if (typeof window !== "undefined" && "webkitSpeechRecognition" in window) {
@@ -325,9 +327,22 @@ export default function VoiceTherapyChat() {
     async (text: string) => {
       if (!text.trim()) return
 
+      // 检查未登录用户的免费试用
       if (!isLoggedIn && freeTrialEnded) {
+        stopSession()
         setShowLoginModal(true)
         return
+      }
+
+      // 检查已登录用户的剩余时长
+      if (isLoggedIn && user) {
+        const remainingMinutes = (purchasedHours * 60) - usedMinutes
+        if (remainingMinutes <= 0) {
+          stopSession()
+          setSessionEndReason("时长已用完，请充值后继续使用")
+          setShowPaymentModal(true)
+          return
+        }
       }
 
       setUserSpeakingStartTime(null)
@@ -411,7 +426,7 @@ export default function VoiceTherapyChat() {
         startListening()
       }
     },
-    [messages, currentSessionId, isAudioEnabled, speakText, startListening, isLoggedIn, freeTrialEnded],
+    [messages, currentSessionId, isAudioEnabled, speakText, startListening, isLoggedIn, freeTrialEnded, user, purchasedHours, usedMinutes, stopSession],
   )
 
   const startSession = useCallback(() => {
@@ -428,7 +443,34 @@ export default function VoiceTherapyChat() {
     }
 
     sessionTimerRef.current = setInterval(() => {
-      setSessionDuration((prev) => prev + 1)
+      setSessionDuration((prev) => {
+        const newDuration = prev + 1
+        
+        // 每秒检查时长限制
+        if (!isLoggedIn && freeTrialEnded) {
+          // 免费试用到期
+          stopSession()
+          setShowLoginModal(true)
+          return newDuration
+        }
+        
+        if (isLoggedIn && user) {
+          // 计算已用分钟数（包括当前会话）
+          const currentSessionMinutes = Math.ceil(newDuration / 60)
+          const totalUsedMinutes = usedMinutes + currentSessionMinutes
+          const remainingMinutes = (purchasedHours * 60) - totalUsedMinutes
+          
+          if (remainingMinutes <= 0) {
+            // 时长用完
+            stopSession()
+            setSessionEndReason("时长已用完，请充值后继续使用")
+            setShowPaymentModal(true)
+            return newDuration
+          }
+        }
+        
+        return newDuration
+      })
     }, 1000)
 
     const greeting = "Hello, I'm your AI counselor. How are you feeling today?"
@@ -680,17 +722,29 @@ export default function VoiceTherapyChat() {
 
       <LoginModal
         isOpen={showLoginModal}
-        onClose={() => setShowLoginModal(false)}
+        onClose={() => {
+          setShowLoginModal(false)
+          setSessionEndReason(null)
+        }}
         onLogin={handleLogin}
         onSocialLogin={handleSocialLogin}
         message={
-          freeTrialEnded
+          sessionEndReason ||
+          (freeTrialEnded
             ? "Your free 1-minute trial has ended. Please sign in to continue."
-            : "Sign in to save your progress and access unlimited sessions"
+            : "Sign in to save your progress and access unlimited sessions")
         }
       />
 
-      {showPaymentModal && <PaymentModal isOpen={showPaymentModal} onClose={() => setShowPaymentModal(false)} />}
+      {showPaymentModal && (
+        <PaymentModal
+          isOpen={showPaymentModal}
+          onClose={() => {
+            setShowPaymentModal(false)
+            setSessionEndReason(null)
+          }}
+        />
+      )}
 
       {showUserAccount && user && (
         <UserAccountPage
