@@ -76,13 +76,65 @@ export async function GET(request: NextRequest) {
     const user = await userResponse.json()
     console.log('获取到用户信息:', { email: user.email, name: user.name })
     
+    // 🔥 关键修复：在 Supabase Auth 中创建或获取用户
+    const supabaseAdmin = (await import("@supabase/supabase-js")).createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+    
+    // 检查用户是否已存在
+    const { data: existingUser } = await supabaseAdmin.auth.admin.getUserByEmail(user.email)
+    
+    let supabaseUserId: string
+    
+    if (existingUser?.user) {
+      // 用户已存在，使用现有ID
+      supabaseUserId = existingUser.user.id
+      console.log('用户已存在:', supabaseUserId)
+    } else {
+      // 创建新用户
+      const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+        email: user.email,
+        email_confirm: true,
+        user_metadata: {
+          name: user.name,
+          picture: user.picture,
+          provider: 'google',
+        },
+      })
+      
+      if (createError || !newUser.user) {
+        console.error('创建 Supabase 用户失败:', createError)
+        return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/?error=user_creation_failed`)
+      }
+      
+      supabaseUserId = newUser.user.id
+      console.log('新用户已创建:', supabaseUserId)
+      
+      // 在 users 表中创建记录（如果触发器未自动创建）
+      const { error: dbError } = await supabaseAdmin.from('users').upsert({
+        id: supabaseUserId,
+        email: user.email,
+        name: user.name,
+        total_hours: 0,
+        used_hours: 0,
+      }, {
+        onConflict: 'id'
+      })
+      
+      if (dbError) {
+        console.error('创建 users 表记录失败:', dbError)
+        // 不阻止登录，因为用户已在 auth 表中创建
+      }
+    }
+    
     // 创建会话 cookie
     const sessionData = {
       user: {
         email: user.email,
         name: user.name,
         image: user.picture,
-        id: user.id,
+        id: supabaseUserId, // 使用 Supabase 用户 ID
       },
       expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
     }

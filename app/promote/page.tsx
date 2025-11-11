@@ -13,6 +13,9 @@ import Link from "next/link"
 export default function AffiliateRegistrationPage() {
   const [email, setEmail] = useState("")
   const [name, setName] = useState("")
+  const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [inviteCode, setInviteCode] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [registrationSuccess, setRegistrationSuccess] = useState(false)
@@ -28,11 +31,36 @@ export default function AffiliateRegistrationPage() {
     setIsLoading(true)
     setError(null)
 
+    // 验证
+    if (!email) {
+      setError("Email is required")
+      setIsLoading(false)
+      return
+    }
+
+    if (!inviteCode) {
+      setError("Invite code is required")
+      setIsLoading(false)
+      return
+    }
+
+    if (!password || password.length < 6) {
+      setError("Password must be at least 6 characters")
+      setIsLoading(false)
+      return
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match")
+      setIsLoading(false)
+      return
+    }
+
     try {
       const response = await fetch("/api/affiliate/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, name }),
+        body: JSON.stringify({ email, name, password, inviteCode }),
       })
 
       const data = await response.json()
@@ -157,6 +185,51 @@ export default function AffiliateRegistrationPage() {
                 onChange={(e) => setName(e.target.value)}
                 className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
                 placeholder="Your name"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="inviteCode" className="text-white">
+                Invite Code *
+              </Label>
+              <Input
+                id="inviteCode"
+                type="text"
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value)}
+                required
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                placeholder="Enter your invite code"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-white">
+                Password *
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                placeholder="At least 6 characters"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword" className="text-white">
+                Confirm Password *
+              </Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                placeholder="Re-enter your password"
               />
             </div>
 
