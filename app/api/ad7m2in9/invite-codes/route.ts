@@ -16,14 +16,14 @@ function generateCode(): string {
 // GET - List all invite codes
 export async function GET() {
   try {
-    const { data: codes, error } = await supabaseAdmin
+    const { data: inviteCodes, error } = await supabaseAdmin
       .from("affiliate_invite_codes")
       .select("*")
       .order("created_at", { ascending: false })
 
     if (error) throw error
 
-    return NextResponse.json({ codes })
+    return NextResponse.json({ success: true, inviteCodes })
   } catch (error) {
     console.error("[Admin] Error fetching invite codes:", error)
     return NextResponse.json({ error: "Failed to fetch invite codes" }, { status: 500 })
@@ -34,46 +34,53 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { maxUses = 1, expiresInDays } = body
+    const { code: customCode, maxUses = 1, expiresAt, createdBy = "admin" } = body
 
-    // Generate unique code
-    let code = generateCode()
-    let isUnique = false
-    let attempts = 0
-
-    while (!isUnique && attempts < 10) {
+    // Use custom code or generate one
+    let code = customCode || generateCode()
+    
+    // Check if code is unique
+    if (customCode) {
       const { data: existing } = await supabaseAdmin
         .from("affiliate_invite_codes")
         .select("id")
         .eq("code", code)
         .single()
 
-      if (!existing) {
-        isUnique = true
-      } else {
-        code = generateCode()
-        attempts++
+      if (existing) {
+        return NextResponse.json({ error: "该邀请码已存在" }, { status: 400 })
       }
-    }
+    } else {
+      // Generate unique code
+      let isUnique = false
+      let attempts = 0
 
-    if (!isUnique) {
-      return NextResponse.json({ error: "Failed to generate unique code" }, { status: 500 })
-    }
+      while (!isUnique && attempts < 10) {
+        const { data: existing } = await supabaseAdmin
+          .from("affiliate_invite_codes")
+          .select("id")
+          .eq("code", code)
+          .single()
 
-    // Calculate expiry date if specified
-    let expiresAt = null
-    if (expiresInDays) {
-      const expiry = new Date()
-      expiry.setDate(expiry.getDate() + expiresInDays)
-      expiresAt = expiry.toISOString()
+        if (!existing) {
+          isUnique = true
+        } else {
+          code = generateCode()
+          attempts++
+        }
+      }
+
+      if (!isUnique) {
+        return NextResponse.json({ error: "Failed to generate unique code" }, { status: 500 })
+      }
     }
 
     // Create invite code
     const { data: inviteCode, error } = await supabaseAdmin
       .from("affiliate_invite_codes")
       .insert({
-        code,
-        created_by: "admin",
+        code: code.toUpperCase(),
+        created_by: createdBy,
         max_uses: maxUses,
         status: "active",
         expires_at: expiresAt,
@@ -81,12 +88,39 @@ export async function POST(request: NextRequest) {
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      console.error("[Admin] Error creating invite code:", error)
+      throw error
+    }
 
     return NextResponse.json({ success: true, inviteCode })
   } catch (error) {
     console.error("[Admin] Error creating invite code:", error)
     return NextResponse.json({ error: "Failed to create invite code" }, { status: 500 })
+  }
+}
+
+// PATCH - Update invite code status
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { id, status } = body
+
+    if (!id || !status) {
+      return NextResponse.json({ error: "ID and status are required" }, { status: 400 })
+    }
+
+    const { error } = await supabaseAdmin
+      .from("affiliate_invite_codes")
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq("id", id)
+
+    if (error) throw error
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("[Admin] Error updating invite code:", error)
+    return NextResponse.json({ error: "Failed to update invite code" }, { status: 500 })
   }
 }
 

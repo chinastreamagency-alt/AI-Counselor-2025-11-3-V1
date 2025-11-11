@@ -8,7 +8,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { DollarSign, Users, ShoppingCart, TrendingUp, Download, LogOut } from "lucide-react"
+import { DollarSign, Users, ShoppingCart, TrendingUp, Download, LogOut, Ticket, UserCog } from "lucide-react"
+import Link from "next/link"
 
 type Order = {
   id: string
@@ -141,14 +142,36 @@ export default function AdminDashboard() {
             <h1 className="text-4xl font-bold text-indigo-900 mb-2">后台管理控制台</h1>
             <p className="text-indigo-700">欢迎回来，{admin?.username}</p>
           </div>
-          <Button
-            onClick={handleLogout}
-            variant="outline"
-            className="bg-white border-indigo-300 text-indigo-700 hover:bg-indigo-50 hover:border-indigo-400"
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            退出登录
-          </Button>
+          <div className="flex gap-3">
+            <Button
+              asChild
+              variant="outline"
+              className="bg-white border-indigo-300 text-indigo-700 hover:bg-indigo-50 hover:border-indigo-400"
+            >
+              <Link href="/ad7m2in9/invite-codes">
+                <Ticket className="w-4 h-4 mr-2" />
+                邀请码管理
+              </Link>
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              className="bg-white border-indigo-300 text-indigo-700 hover:bg-indigo-50 hover:border-indigo-400"
+            >
+              <Link href="/ad7m2in9/affiliates">
+                <UserCog className="w-4 h-4 mr-2" />
+                分销商管理
+              </Link>
+            </Button>
+            <Button
+              onClick={handleLogout}
+              variant="outline"
+              className="bg-white border-indigo-300 text-indigo-700 hover:bg-indigo-50 hover:border-indigo-400"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              退出登录
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}
