@@ -66,6 +66,7 @@ export default function AffiliateRegistrationPage() {
       const data = await response.json()
 
       if (!response.ok) {
+        console.error("注册失败详情：", data)
         throw new Error(data.error || "Registration failed")
       }
 
@@ -76,7 +77,9 @@ export default function AffiliateRegistrationPage() {
       })
       setRegistrationSuccess(true)
     } catch (error) {
-      setError(error instanceof Error ? error.message : "Registration failed")
+      console.error("注册错误：", error)
+      const errorMessage = error instanceof Error ? error.message : "Registration failed"
+      setError(errorMessage)
     } finally {
       setIsLoading(false)
     }
