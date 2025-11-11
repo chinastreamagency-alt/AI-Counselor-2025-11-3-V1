@@ -46,23 +46,38 @@ export async function POST(request: Request) {
     }
 
     // Create user in public.users table
+    const insertData: any = {
+      id: authData.user.id,
+      email,
+      name: name || email.split("@")[0],
+    }
+
+    // Only add password_hash if the column exists
+    try {
+      insertData.password_hash = passwordHash
+    } catch (e) {
+      console.log("[Register] Note: password_hash column may not exist")
+    }
+
     const { data: userData, error: userError } = await supabaseAdmin
       .from("users")
-      .insert({
-        id: authData.user.id,
-        email,
-        name: name || email.split("@")[0],
-        password_hash: passwordHash,
-        total_hours: 0,
-      })
+      .insert(insertData)
       .select()
       .single()
 
     if (userError) {
       console.error("[Register] Database error:", userError)
+      console.error("[Register] Insert data:", insertData)
       // Cleanup: delete auth user if database insert fails
-      await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
-      return NextResponse.json({ error: "Failed to create user profile" }, { status: 500 })
+      try {
+        await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
+      } catch (cleanupError) {
+        console.error("[Register] Cleanup error:", cleanupError)
+      }
+      return NextResponse.json(
+        { error: `Failed to create user profile: ${userError.message || userError.code || "Unknown error"}` },
+        { status: 500 }
+      )
     }
 
     return NextResponse.json({
