@@ -77,19 +77,24 @@ export async function GET(request: NextRequest) {
     console.log('获取到用户信息:', { email: user.email, name: user.name })
     
     // 🔥 关键修复：在 Supabase Auth 中创建或获取用户
-    const supabaseAdmin = (await import("@supabase/supabase-js")).createClient(
+    const { createClient } = await import("@supabase/supabase-js")
+    const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
     
-    // 检查用户是否已存在
-    const { data: existingUser } = await supabaseAdmin.auth.admin.getUserByEmail(user.email)
-    
     let supabaseUserId: string
     
-    if (existingUser?.user) {
-      // 用户已存在，使用现有ID
-      supabaseUserId = existingUser.user.id
+    // 先尝试在 users 表中查找用户
+    const { data: existingUserRecord } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('email', user.email)
+      .single()
+    
+    if (existingUserRecord) {
+      // 用户已存在
+      supabaseUserId = existingUserRecord.id
       console.log('用户已存在:', supabaseUserId)
     } else {
       // 创建新用户
@@ -112,19 +117,19 @@ export async function GET(request: NextRequest) {
       console.log('新用户已创建:', supabaseUserId)
       
       // 在 users 表中创建记录（如果触发器未自动创建）
-      const { error: dbError } = await supabaseAdmin.from('users').upsert({
+      const { error: dbError } = await supabaseAdmin.from('users').insert({
         id: supabaseUserId,
         email: user.email,
         name: user.name,
         total_hours: 0,
         used_hours: 0,
-      }, {
-        onConflict: 'id'
       })
       
       if (dbError) {
         console.error('创建 users 表记录失败:', dbError)
         // 不阻止登录，因为用户已在 auth 表中创建
+      } else {
+        console.log('users 表记录已创建')
       }
     }
     
