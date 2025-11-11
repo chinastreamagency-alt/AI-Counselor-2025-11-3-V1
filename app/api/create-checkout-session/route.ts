@@ -24,34 +24,56 @@ export async function POST(request: NextRequest) {
 
     console.log("[Stripe] Product found:", product)
 
-    // Get user from custom session (Google OAuth)
+    // Get user from either custom_session (Google) or user_token (Email)
     const cookieStore = await cookies()
     const sessionCookie = cookieStore.get('custom_session')
+    const userTokenCookie = cookieStore.get('user_token')
     
-    if (!sessionCookie) {
-      console.error("[Stripe] No session cookie found")
+    if (!sessionCookie && !userTokenCookie) {
+      console.error("[Stripe] No session found - user not logged in")
       return NextResponse.json({ error: "Unauthorized - Please log in" }, { status: 401 })
     }
 
-    let user
-    try {
-      const session = JSON.parse(sessionCookie.value)
-      
-      // Check if session is expired
-      if (new Date(session.expires) < new Date()) {
-        console.error("[Stripe] Session expired")
-        return NextResponse.json({ error: "Session expired - Please log in again" }, { status: 401 })
+    let user: { id?: string; email: string; name?: string } | null = null
+
+    // Try Google session first
+    if (sessionCookie) {
+      try {
+        const session = JSON.parse(sessionCookie.value)
+        
+        // Check if session is expired
+        if (new Date(session.expires) < new Date()) {
+          console.error("[Stripe] Google session expired")
+        } else {
+          user = session.user
+          console.log("[Stripe] User authenticated via Google:", user?.email)
+        }
+      } catch (parseError) {
+        console.error("[Stripe] Error parsing Google session:", parseError)
       }
-      
-      user = session.user
-    } catch (parseError) {
-      console.error("[Stripe] Error parsing session:", parseError)
-      return NextResponse.json({ error: "Invalid session" }, { status: 401 })
+    }
+
+    // Try email/password session if Google session not found
+    if (!user && userTokenCookie) {
+      try {
+        const { jwtVerify } = await import("jose")
+        const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "your-secret-key-change-in-production")
+        
+        const { payload } = await jwtVerify(userTokenCookie.value, JWT_SECRET)
+        user = {
+          id: payload.userId as string,
+          email: payload.email as string,
+          name: payload.name as string,
+        }
+        console.log("[Stripe] User authenticated via email:", user.email)
+      } catch (jwtError) {
+        console.error("[Stripe] Error verifying user token:", jwtError)
+      }
     }
 
     if (!user || !user.email) {
-      console.error("[Stripe] No user found in session")
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      console.error("[Stripe] No valid user found in any session")
+      return NextResponse.json({ error: "Unauthorized - Please log in again" }, { status: 401 })
     }
 
     console.log("[Stripe] User authenticated:", user.email)

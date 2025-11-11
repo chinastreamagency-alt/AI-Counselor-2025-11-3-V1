@@ -1,7 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { stripe } from "@/lib/stripe"
 import { headers } from "next/headers"
-import { loadUserProfile, saveUserProfile } from "@/lib/user-profile"
+import { createClient } from "@supabase/supabase-js"
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 // 禁用 Next.js 的 body 解析，因为 Stripe 需要原始 body
 export const runtime = "nodejs"
@@ -51,6 +56,7 @@ export async function POST(request: NextRequest) {
           hours,
           sessionId: session.id,
           amountTotal: session.amount_total,
+          affiliateId,
         })
 
         if (!userEmail || !hours) {
@@ -58,18 +64,95 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: "Missing metadata" }, { status: 400 })
         }
 
-        // 为用户账户充值时间
-        const purchasedHours = parseInt(hours, 10)
-        const userProfile = loadUserProfile(userEmail)
-        
-        // 更新用户的购买小时数
-        userProfile.purchasedHours = (userProfile.purchasedHours || 0) + purchasedHours
-        userProfile.lastUpdated = new Date().toISOString()
-        
-        saveUserProfile(userProfile)
-        
-        console.log("[Stripe Webhook] ✅ Added", purchasedHours, "hours to", userEmail)
-        console.log("[Stripe Webhook] Total hours now:", userProfile.purchasedHours)
+        const purchasedHours = parseFloat(hours)
+        const amountPaid = session.amount_total / 100 // Convert cents to dollars
+
+        try {
+          // 1. 查找用户
+          const { data: user, error: userError } = await supabaseAdmin
+            .from("users")
+            .select("id, total_hours")
+            .eq("email", userEmail)
+            .single()
+
+          if (userError || !user) {
+            console.error("[Stripe Webhook] User not found:", userError)
+            return NextResponse.json({ error: "User not found" }, { status: 404 })
+          }
+
+          console.log("[Stripe Webhook] Found user:", user.id, "current hours:", user.total_hours)
+
+          // 2. 更新用户的总时长
+          const newTotalHours = (user.total_hours || 0) + purchasedHours
+          const { error: updateError } = await supabaseAdmin
+            .from("users")
+            .update({ 
+              total_hours: newTotalHours,
+              updated_at: new Date().toISOString()
+            })
+            .eq("id", user.id)
+
+          if (updateError) {
+            console.error("[Stripe Webhook] Failed to update user hours:", updateError)
+            return NextResponse.json({ error: "Failed to update hours" }, { status: 500 })
+          }
+
+          console.log("[Stripe Webhook] ✅ Updated user hours from", user.total_hours, "to", newTotalHours)
+
+          // 3. 创建订单记录
+          const { data: order, error: orderError } = await supabaseAdmin
+            .from("orders")
+            .insert({
+              user_id: user.id,
+              stripe_session_id: session.id,
+              amount: amountPaid,
+              hours: purchasedHours,
+              status: "completed",
+              affiliate_id: affiliateId || null,
+            })
+            .select()
+            .single()
+
+          if (orderError) {
+            console.error("[Stripe Webhook] Failed to create order:", orderError)
+            // Don't return error - hours already updated
+          } else {
+            console.log("[Stripe Webhook] ✅ Order created:", order.id)
+
+            // 4. 如果有推荐人，创建佣金记录
+            if (affiliateId) {
+              // 获取推荐人的佣金比例
+              const { data: affiliate } = await supabaseAdmin
+                .from("affiliates")
+                .select("commission_rate")
+                .eq("id", affiliateId)
+                .single()
+
+              if (affiliate) {
+                const commissionRate = affiliate.commission_rate || 10
+                const commissionAmount = (amountPaid * commissionRate) / 100
+
+                const { error: commissionError } = await supabaseAdmin
+                  .from("commissions")
+                  .insert({
+                    affiliate_id: affiliateId,
+                    order_id: order.id,
+                    amount: commissionAmount,
+                    status: "pending",
+                  })
+
+                if (commissionError) {
+                  console.error("[Stripe Webhook] Failed to create commission:", commissionError)
+                } else {
+                  console.log("[Stripe Webhook] ✅ Commission created:", commissionAmount, "USD")
+                }
+              }
+            }
+          }
+        } catch (dbError: any) {
+          console.error("[Stripe Webhook] Database error:", dbError)
+          return NextResponse.json({ error: "Database error" }, { status: 500 })
+        }
         
         break
       }
