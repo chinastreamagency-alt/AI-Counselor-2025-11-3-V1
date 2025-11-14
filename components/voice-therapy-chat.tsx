@@ -865,8 +865,8 @@ export default function VoiceTherapyChat() {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex items-center justify-center p-0 sm:p-4 pt-16 sm:pt-20 pb-24 sm:pb-28">
-        <div className="relative w-full h-full sm:h-auto sm:max-w-4xl">
+      <div className="flex-1 flex items-center justify-center p-0 sm:p-2 pt-16 sm:pt-20 pb-32 sm:pb-32">
+        <div className="relative w-full h-full sm:h-[85vh] sm:max-w-6xl">
           <VideoAvatar
             isListening={status === "listening"}
             isSpeaking={status === "speaking"}
@@ -875,7 +875,7 @@ export default function VoiceTherapyChat() {
           />
         
                {/* Control panel overlay - positioned at bottom center of video */}
-               <div className="absolute bottom-6 sm:bottom-12 left-0 right-0 flex flex-col items-center gap-3 sm:gap-4 px-4 z-50">
+               <div className="absolute bottom-20 sm:bottom-16 left-0 right-0 flex flex-col items-center gap-3 sm:gap-4 px-4 z-50">
                  {/* Status indicator */}
                  <div className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-white/90 backdrop-blur-md rounded-full border border-indigo-200 shadow-lg shadow-indigo-200/50">
             <div
