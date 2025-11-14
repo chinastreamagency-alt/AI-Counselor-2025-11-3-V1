@@ -64,42 +64,14 @@ export function VideoAvatar({ isListening, isSpeaking, currentSpeaker, currentTe
       {/* 环境光效果 - 仅桌面显示 */}
       <div className="absolute -inset-4 bg-gradient-radial from-blue-200/20 via-purple-200/10 to-transparent rounded-full blur-xl pointer-events-none hidden lg:block animate-pulse"></div>
 
-      {/* Status overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
-
-      {/* Header with title and status */}
-      <div className="absolute top-0 left-0 right-0 p-6 flex items-center justify-between">
-        <div className="flex flex-col">
-          <h2 className="text-white text-2xl font-bold drop-shadow-lg">AI Counselor</h2>
-          <p className="text-white/90 text-sm drop-shadow-md">with Arina</p>
-        </div>
-
-        <div className="flex items-center gap-2 bg-white/20 backdrop-blur-md px-4 py-2 rounded-full">
-          <div
-            className={`w-2 h-2 rounded-full ${
-              status === "listening"
-                ? "bg-green-400 animate-pulse"
-                : status === "speaking"
-                  ? "bg-blue-400 animate-pulse"
-                  : "bg-gray-400"
-            }`}
-          />
-          <span className="text-white text-sm font-medium drop-shadow-md">
-            {status === "idle" && "Ready"}
-            {status === "listening" && "Listening"}
-            {status === "speaking" && "Speaking"}
-          </span>
-        </div>
-      </div>
-
-      {/* Current text display */}
-      {currentText && (
-        <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent">
-          <div className="bg-white/10 backdrop-blur-md rounded-lg p-4">
-            <p className="text-white text-sm leading-relaxed">{currentText}</p>
-          </div>
-        </div>
-      )}
+      {/* Ambient overlay with breathing effect */}
+      <div className={`absolute inset-0 transition-all duration-1000 pointer-events-none ${
+        status === "listening" 
+          ? "bg-gradient-to-t from-green-500/10 via-transparent to-transparent"
+          : status === "speaking"
+            ? "bg-gradient-to-t from-blue-500/10 via-transparent to-transparent"
+            : "bg-gradient-to-t from-purple-500/5 via-transparent to-transparent"
+      }`} />
     </div>
   )
 }

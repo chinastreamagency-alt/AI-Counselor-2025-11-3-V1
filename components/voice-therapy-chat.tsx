@@ -812,20 +812,56 @@ export default function VoiceTherapyChat() {
   }
 
   return (
-    <div className="relative h-screen overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-100 to-purple-50 flex items-center justify-center p-4">
-      {/* Video Avatar - centered and large */}
-      <div className="relative w-full max-w-2xl">
-        <VideoAvatar
-          isListening={status === "listening"}
-          isSpeaking={status === "speaking"}
-          currentSpeaker={currentSpeaker}
-          currentText={currentText}
-        />
+    <div className="relative h-screen overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-100 to-purple-50 flex flex-col">
+      {/* Top Brand Bar */}
+      <div className="absolute top-0 left-0 right-0 z-50 px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-between bg-gradient-to-b from-white/80 via-white/60 to-transparent backdrop-blur-sm">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-cyan-500 to-purple-600 flex items-center justify-center shadow-lg">
+            <Phone className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-cyan-600 to-purple-600 bg-clip-text text-transparent">
+              AI-Counselor
+            </h1>
+            <p className="text-xs text-slate-600 hidden sm:block">with Arina</p>
+          </div>
+        </div>
+        
+        {/* Login/User Menu - moved from separate position */}
+        {isLoggedIn && user ? (
+          <UserMenu
+            user={user}
+            purchasedHours={purchasedHours}
+            usedMinutes={usedMinutes}
+            onViewAccount={() => setShowUserAccount(true)}
+            onLogout={handleLogout}
+          />
+        ) : (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowLoginModal(true)}
+            className="bg-white/90 backdrop-blur-sm border-indigo-200 text-indigo-700 hover:bg-white hover:border-indigo-300 shadow-lg font-medium text-xs sm:text-sm px-3 py-1 sm:px-4 sm:py-2"
+          >
+            Login / Register
+          </Button>
+        )}
+      </div>
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex items-center justify-center p-4 pt-20 pb-20">
+        <div className="relative w-full max-w-2xl">
+          <VideoAvatar
+            isListening={status === "listening"}
+            isSpeaking={status === "speaking"}
+            currentSpeaker={currentSpeaker}
+            currentText={currentText}
+          />
         
                {/* Control panel overlay - positioned at bottom center of video */}
-               <div className="absolute bottom-8 left-0 right-0 flex flex-col items-center gap-4 px-4">
+               <div className="absolute bottom-4 sm:bottom-8 left-0 right-0 flex flex-col items-center gap-3 sm:gap-4 px-4">
                  {/* Status indicator */}
-                 <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/90 backdrop-blur-md rounded-full border border-indigo-200 shadow-lg shadow-indigo-200/50">
+                 <div className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-white/90 backdrop-blur-md rounded-full border border-indigo-200 shadow-lg shadow-indigo-200/50">
             <div
               className={`w-2 h-2 rounded-full ${
                 status === "listening"
@@ -837,7 +873,7 @@ export default function VoiceTherapyChat() {
                       : "bg-gray-400"
               }`}
             />
-                   <span className="text-sm font-medium text-slate-700">
+                   <span className="text-xs sm:text-sm font-medium text-slate-700">
               {status === "idle"
                 ? "Ready"
                 : status === "listening"
@@ -850,21 +886,35 @@ export default function VoiceTherapyChat() {
             </span>
           </div>
 
+                 {/* Subtitle/Transcript Display */}
+                 {currentText && (
+                   <div className="w-full max-w-md px-4">
+                     <div className="bg-black/70 backdrop-blur-md rounded-xl px-4 py-3 shadow-2xl border border-white/10">
+                       <p className="text-white text-sm leading-relaxed text-center">{currentText}</p>
+                     </div>
+                   </div>
+                 )}
+                 
+                 {transcript && status === "listening" && !currentText && (
+                   <div className="w-full max-w-md px-4">
+                     <div className="bg-green-500/20 backdrop-blur-md rounded-xl px-4 py-2 border border-green-400/30">
+                       <p className="text-green-100 text-xs text-center italic">{transcript}</p>
+                     </div>
+                   </div>
+                 )}
+
                  {/* Free trial timer */}
                  {!isLoggedIn && freeTrialActive && (
-                   <p className="text-sm text-indigo-700 font-medium bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full border border-indigo-200 shadow-md">
+                   <p className="text-xs sm:text-sm text-indigo-700 font-medium bg-white/90 backdrop-blur-sm px-3 py-1.5 sm:px-4 sm:py-2 rounded-full border border-indigo-200 shadow-md">
               Free trial: {formatTime(freeTrialTimeLeft)}
             </p>
           )}
 
                  {/* Session duration */}
                  {status !== "idle" && (
-                   <div className="text-center">
-                     <p className="text-sm text-indigo-700 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full inline-block border border-indigo-200 shadow-md font-medium">
-                       Session: {formatTime(sessionDuration)}
-                     </p>
-                     {transcript && <p className="text-xs text-slate-600 mt-2 bg-white/60 px-3 py-1 rounded-lg">{transcript}</p>}
-                   </div>
+                   <p className="text-xs sm:text-sm text-indigo-700 bg-white/90 backdrop-blur-sm px-3 py-1.5 sm:px-4 sm:py-2 rounded-full inline-block border border-indigo-200 shadow-md font-medium">
+                     Session: {formatTime(sessionDuration)}
+                   </p>
                  )}
 
           {/* Call button - centered like phone interface with futuristic design */}
@@ -872,26 +922,26 @@ export default function VoiceTherapyChat() {
           {status === "idle" ? (
             <button
               onClick={startSession}
-              className="relative w-24 h-24 rounded-full bg-gradient-to-br from-cyan-500 via-blue-500 to-purple-600 hover:from-cyan-400 hover:via-blue-400 hover:to-purple-500 shadow-2xl hover:shadow-cyan-400/60 transition-all duration-300 flex items-center justify-center group overflow-hidden"
+              className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-cyan-500 via-blue-500 to-purple-600 hover:from-cyan-400 hover:via-blue-400 hover:to-purple-500 shadow-2xl hover:shadow-cyan-400/60 transition-all duration-300 flex items-center justify-center group overflow-hidden"
               style={{
                 boxShadow: '0 0 40px rgba(6, 182, 212, 0.5), 0 0 60px rgba(59, 130, 246, 0.3), inset 0 -5px 15px rgba(0, 0, 0, 0.2)'
               }}
               aria-label="Start Conversation"
             >
               <div className="absolute inset-0 bg-gradient-to-t from-white/0 via-white/10 to-white/20 rounded-full"></div>
-              <Phone className="w-10 h-10 text-white group-hover:scale-125 transition-transform drop-shadow-[0_2px_8px_rgba(255,255,255,0.8)]" />
+              <Phone className="w-8 h-8 sm:w-10 sm:h-10 text-white group-hover:scale-125 transition-transform drop-shadow-[0_2px_8px_rgba(255,255,255,0.8)]" />
             </button>
           ) : (
             <button
               onClick={stopSession}
-              className="relative w-24 h-24 rounded-full bg-gradient-to-br from-red-500 via-pink-500 to-red-600 hover:from-red-400 hover:via-pink-400 hover:to-red-500 shadow-2xl hover:shadow-red-400/60 transition-all duration-300 flex items-center justify-center group overflow-hidden"
+              className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-red-500 via-pink-500 to-red-600 hover:from-red-400 hover:via-pink-400 hover:to-red-500 shadow-2xl hover:shadow-red-400/60 transition-all duration-300 flex items-center justify-center group overflow-hidden"
               style={{
                 boxShadow: '0 0 40px rgba(239, 68, 68, 0.5), 0 0 60px rgba(236, 72, 153, 0.3), inset 0 -5px 15px rgba(0, 0, 0, 0.2)'
               }}
               aria-label="End call"
             >
               <div className="absolute inset-0 bg-gradient-to-t from-white/0 via-white/10 to-white/20 rounded-full"></div>
-              <PhoneOff className="w-10 h-10 text-white group-hover:scale-125 transition-transform drop-shadow-[0_2px_8px_rgba(255,255,255,0.8)]" />
+              <PhoneOff className="w-8 h-8 sm:w-10 sm:h-10 text-white group-hover:scale-125 transition-transform drop-shadow-[0_2px_8px_rgba(255,255,255,0.8)]" />
             </button>
           )}
           </div>
@@ -901,40 +951,34 @@ export default function VoiceTherapyChat() {
                    variant="ghost"
                    size="sm"
                    onClick={toggleAudio}
-                   className="text-indigo-700 hover:text-indigo-900 hover:bg-white/50 backdrop-blur-sm border border-indigo-200"
+                   className="text-indigo-700 hover:text-indigo-900 hover:bg-white/50 backdrop-blur-sm border border-indigo-200 text-xs sm:text-sm px-3 py-1.5 sm:px-4 sm:py-2"
                  >
-            {isAudioEnabled ? <Volume2 className="w-5 h-5 mr-2" /> : <VolumeX className="w-5 h-5 mr-2" />}
+            {isAudioEnabled ? <Volume2 className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" /> : <VolumeX className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />}
             {isAudioEnabled ? "Audio On" : "Audio Off"}
           </Button>
         </div>
 
                {/* Error messages */}
                {elevenLabsError && (
-                 <div className="absolute top-4 left-4 right-4 p-4 bg-red-50 backdrop-blur-sm border border-red-200 rounded-lg shadow-lg">
-                   <p className="text-sm text-red-700 text-center font-medium">{elevenLabsError}</p>
+                 <div className="absolute top-20 left-4 right-4 p-3 sm:p-4 bg-red-50 backdrop-blur-sm border border-red-200 rounded-lg shadow-lg">
+                   <p className="text-xs sm:text-sm text-red-700 text-center font-medium">{elevenLabsError}</p>
                  </div>
                )}
+        </div>
       </div>
 
-      {/* Login button - top right corner */}
-      <div className="absolute top-4 right-4 z-50">
-        {isLoggedIn && user ? (
-          <UserMenu
-            user={user}
-            purchasedHours={purchasedHours}
-            usedMinutes={usedMinutes}
-            onViewAccount={() => setShowUserAccount(true)}
-            onLogout={handleLogout}
-          />
-        ) : (
-               <Button
-                   variant="outline"
-                   onClick={() => setShowLoginModal(true)}
-                   className="bg-white/90 backdrop-blur-sm border-indigo-200 text-indigo-700 hover:bg-white hover:border-indigo-300 shadow-lg font-medium"
-                 >
-                   Login / Register
-                 </Button>
-        )}
+      {/* Bottom Brand Footer */}
+      <div className="absolute bottom-0 left-0 right-0 z-50 px-4 py-3 sm:py-4 bg-gradient-to-t from-white/80 via-white/60 to-transparent backdrop-blur-sm">
+        <div className="text-center">
+          <p className="text-xs sm:text-sm text-slate-600 font-medium">
+            © 2024 Arina AI TECH LTD
+          </p>
+          <p className="text-xs text-slate-500 mt-1">
+            <a href="mailto:contact@arina-ai.tech" className="hover:text-indigo-600 transition-colors">
+              contact@arina-ai.tech
+            </a>
+          </p>
+        </div>
       </div>
 
       {/* Modals */}
