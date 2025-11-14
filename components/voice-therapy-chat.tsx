@@ -875,7 +875,7 @@ export default function VoiceTherapyChat() {
           />
         
                {/* Control panel overlay - positioned at bottom center of video */}
-               <div className="absolute bottom-28 sm:bottom-16 left-0 right-0 flex flex-col items-center gap-3 sm:gap-4 px-4 z-50">
+               <div className="absolute bottom-36 sm:bottom-16 left-0 right-0 flex flex-col items-center gap-3 sm:gap-4 px-4 z-50">
                  {/* Status indicator */}
                  <div className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-white/90 backdrop-blur-md rounded-full border border-indigo-200 shadow-lg shadow-indigo-200/50">
             <div
