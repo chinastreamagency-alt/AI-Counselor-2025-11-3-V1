@@ -71,10 +71,17 @@ export default function VoiceTherapyChat() {
     const userEmail = urlParams.get('user')
     
     if (loginSuccess === 'success' && userEmail) {
+      console.log("[Google Login] Detected successful login, fetching session...")
+      
       // 从服务器获取完整的用户信息
       fetch('/api/auth/custom-google/session')
-        .then(res => res.json())
+        .then(res => {
+          console.log("[Google Login] Session API response status:", res.status)
+          return res.json()
+        })
         .then(async (session) => {
+          console.log("[Google Login] Session data:", session)
+          
           if (session.user) {
             const userData = {
               id: session.user.id,
@@ -84,6 +91,8 @@ export default function VoiceTherapyChat() {
               provider: 'google',
               sessionCount: 0
             }
+            
+            console.log("[Google Login] Saving user data to localStorage:", userData)
             
             // 保存到 localStorage
             localStorage.setItem("user", JSON.stringify(userData))
@@ -99,6 +108,7 @@ export default function VoiceTherapyChat() {
                 setUsedMinutes(data.usedMinutes || 0)
                 console.log("[Google Login] Loaded user hours from database:", data)
               } else {
+                console.warn("[Google Login] Failed to fetch hours, using localStorage")
                 // Fallback to localStorage
                 const profile = loadUserProfile(userData.email)
                 setPurchasedHours(profile?.purchasedHours || 0)
@@ -113,11 +123,17 @@ export default function VoiceTherapyChat() {
             }
             
             // 清除 URL 参数
+            console.log("[Google Login] Clearing URL parameters...")
             window.history.replaceState({}, document.title, window.location.pathname)
+            
+            // 强制刷新页面状态
+            console.log("[Google Login] Login complete!")
+          } else {
+            console.error("[Google Login] No user data in session response")
           }
         })
         .catch(error => {
-          console.error("Error fetching session:", error)
+          console.error("[Google Login] Error fetching session:", error)
         })
     } else {
       // 检查 localStorage 中是否有已保存的用户信息
@@ -850,7 +866,7 @@ export default function VoiceTherapyChat() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex items-center justify-center p-2 sm:p-4 pt-20 pb-28">
-        <div className="relative w-full h-full max-h-[calc(100vh-14rem)] sm:max-w-4xl">
+        <div className="relative w-full sm:max-w-4xl">
           <VideoAvatar
             isListening={status === "listening"}
             isSpeaking={status === "speaking"}

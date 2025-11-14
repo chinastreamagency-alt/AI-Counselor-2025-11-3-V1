@@ -145,12 +145,20 @@ export async function GET(request: NextRequest) {
     }
     
     // 设置会话 cookie
-    cookieStore.set('custom_session', JSON.stringify(sessionData), {
-      httpOnly: true,
+    const cookieOptions = {
+      httpOnly: false, // 改为 false 让前端可以读取
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: 'lax' as const,
       maxAge: 30 * 24 * 60 * 60, // 30 天
       path: '/',
+    }
+    
+    cookieStore.set('custom_session', JSON.stringify(sessionData), cookieOptions)
+    
+    console.log('Session cookie 已设置:', {
+      name: 'custom_session',
+      options: cookieOptions,
+      dataPreview: { email: user.email, id: supabaseUserId }
     })
     
     // 清除 state cookie
