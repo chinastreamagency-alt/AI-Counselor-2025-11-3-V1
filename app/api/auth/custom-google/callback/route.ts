@@ -165,8 +165,15 @@ export async function GET(request: NextRequest) {
     cookieStore.delete('oauth_state')
     
     console.log('登录成功！重定向到首页...')
-    // 重定向到首页，带上成功标记
-    return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/?login=success&user=${encodeURIComponent(user.email)}`)
+    // 重定向到首页，带上完整的用户信息（以防cookie在手机端不工作）
+    const redirectParams = new URLSearchParams({
+      login: 'success',
+      email: user.email,
+      name: user.name || '',
+      picture: user.picture || '',
+      userId: supabaseUserId
+    })
+    return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/?${redirectParams.toString()}`)
     
   } catch (error) {
     console.error("❌ OAuth callback error:", error)

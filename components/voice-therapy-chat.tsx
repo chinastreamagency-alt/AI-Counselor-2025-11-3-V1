@@ -68,251 +68,61 @@ export default function VoiceTherapyChat() {
     // 首先检查 URL 参数中是否有登录成功的标记
     const urlParams = new URLSearchParams(window.location.search)
     const loginSuccess = urlParams.get('login')
-    const userEmail = urlParams.get('user')
+    const userEmail = urlParams.get('email')
+    const userName = urlParams.get('name')
+    const userPicture = urlParams.get('picture')
+    const userId = urlParams.get('userId')
     
-    if (loginSuccess === 'success' && userEmail) {
-      console.log("[Google Login] Detected successful login, fetching session...")
+    if (loginSuccess === 'success' && userEmail && userId) {
+      console.log("[Google Login] Detected successful login from URL params")
+      console.log("[Google Login] User ID:", userId, "Email:", userEmail)
       
-      // 从服务器获取完整的用户信息
-      fetch('/api/auth/custom-google/session')
-        .then(res => {
-          console.log("[Google Login] Session API response status:", res.status)
-          return res.json()
+      // 直接使用URL参数中的完整用户信息（最可靠的方式）
+      const userData = {
+        id: userId,
+        email: userEmail,
+        name: userName || userEmail.split('@')[0],
+        image: userPicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(userName || userEmail.split('@')[0])}&background=random`,
+        provider: 'google',
+        sessionCount: 0
+      }
+      
+      console.log("[Google Login] Saving user data to localStorage:", userData)
+      
+      // 保存到 localStorage
+      localStorage.setItem("user", JSON.stringify(userData))
+      
+      // 立即更新状态，确保UI刷新
+      setUser(userData)
+      setIsLoggedIn(true)
+      
+      console.log("[Google Login] User state updated successfully!")
+      
+      // 获取用户时长
+      fetch(`/api/user/hours?userId=${userData.id}`)
+        .then(response => {
+          if (response.ok) {
+            return response.json()
+          }
+          throw new Error('Failed to fetch hours')
         })
-        .then(async (session) => {
-          console.log("[Google Login] Session data:", session)
-          
-          if (session.user) {
-            const userData = {
-              id: session.user.id,
-              email: session.user.email,
-              name: session.user.name,
-              image: session.user.image,
-              provider: 'google',
-              sessionCount: 0
-            }
-            
-            console.log("[Google Login] Saving user data to localStorage:", userData)
-            
-            // 保存到 localStorage
-            localStorage.setItem("user", JSON.stringify(userData))
-            
-            // 强制更新状态，确保UI刷新
-            setUser(userData)
-            setIsLoggedIn(true)
-            
-            // 等待状态更新后再清除URL参数
-            setTimeout(() => {
-              console.log("[Google Login] State updated, user:", userData.email)
-            }, 100)
-            
-            // Fetch real-time hours from database
-            try {
-              const response = await fetch(`/api/user/hours?userId=${userData.id}`)
-              if (response.ok) {
-                const data = await response.json()
-                setPurchasedHours(data.totalHours || 0)
-                setUsedMinutes(data.usedMinutes || 0)
-                console.log("[Google Login] Loaded user hours from database:", data)
-              } else {
-                console.warn("[Google Login] Failed to fetch hours, using localStorage")
-                // Fallback to localStorage
-                const profile = loadUserProfile(userData.email)
-                setPurchasedHours(profile?.purchasedHours || 0)
-                setUsedMinutes(profile?.usedMinutes || 0)
-              }
-            } catch (error) {
-              console.error("[Google Login] Error fetching user hours:", error)
-              // Fallback to localStorage
-              const profile = loadUserProfile(userData.email)
-              setPurchasedHours(profile?.purchasedHours || 0)
-              setUsedMinutes(profile?.usedMinutes || 0)
-            }
-            
-            // 清除 URL 参数
+        .then(data => {
+          setPurchasedHours(data.totalHours || 0)
+          setUsedMinutes(data.usedMinutes || 0)
+          console.log("[Google Login] Loaded user hours:", data)
+        })
+        .catch(error => {
+          console.error("[Google Login] Error fetching hours:", error)
+          setPurchasedHours(0)
+          setUsedMinutes(0)
+        })
+        .finally(() => {
+          // 清除 URL 参数（延迟执行，确保状态已更新）
+          setTimeout(() => {
             console.log("[Google Login] Clearing URL parameters...")
             window.history.replaceState({}, document.title, window.location.pathname)
-            
-            // 强制刷新页面状态
             console.log("[Google Login] Login complete!")
-          } else {
-            // Fallback: 如果session为空，同步创建真实用户
-            console.warn("[Google Login] No session data, syncing user with database...")
-            
-            try {
-              // 调用同步API创建或查找真实用户
-              const syncResponse = await fetch('/api/user/sync-google-user', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  email: userEmail,
-                  name: userEmail.split('@')[0],
-                  image: `https://ui-avatars.com/api/?name=${encodeURIComponent(userEmail.split('@')[0])}&background=random`,
-                }),
-              })
-              
-              if (syncResponse.ok) {
-                const syncData = await syncResponse.json()
-                console.log("[Google Login] Sync successful:", syncData)
-                
-                // 使用真实的用户ID
-                const syncedUserData = {
-                  id: syncData.user.id, // 真实的Supabase ID
-                  email: syncData.user.email,
-                  name: syncData.user.name,
-                  image: `https://ui-avatars.com/api/?name=${encodeURIComponent(syncData.user.name)}&background=random`,
-                  provider: 'google',
-                  sessionCount: 0
-                }
-                
-                console.log("[Google Login] Using synced user data:", syncedUserData)
-                
-                // 保存到 localStorage
-                localStorage.setItem("user", JSON.stringify(syncedUserData))
-                
-                // 强制更新状态
-                setUser(syncedUserData)
-                setIsLoggedIn(true)
-                
-                console.log("[Google Login] Sync user state updated:", syncedUserData.email)
-                
-                // 获取用户时长
-                try {
-                  const hoursResponse = await fetch(`/api/user/hours?userId=${syncedUserData.id}`)
-                  if (hoursResponse.ok) {
-                    const hoursData = await hoursResponse.json()
-                    setPurchasedHours(hoursData.totalHours || 0)
-                    setUsedMinutes(hoursData.usedMinutes || 0)
-                    console.log("[Google Login] Loaded hours:", hoursData)
-                  } else {
-                    setPurchasedHours(0)
-                    setUsedMinutes(0)
-                  }
-                } catch (error) {
-                  console.error("[Google Login] Error fetching hours:", error)
-                  setPurchasedHours(0)
-                  setUsedMinutes(0)
-                }
-                
-              } else {
-                // 同步失败，使用临时ID
-                console.warn("[Google Login] Sync failed, using temporary ID")
-                const fallbackUserData = {
-                  id: `google_${userEmail.replace(/[@.]/g, '_')}`,
-                  email: userEmail,
-                  name: userEmail.split('@')[0],
-                  image: `https://ui-avatars.com/api/?name=${encodeURIComponent(userEmail.split('@')[0])}&background=random`,
-                  provider: 'google',
-                  sessionCount: 0
-                }
-                
-                localStorage.setItem("user", JSON.stringify(fallbackUserData))
-                setUser(fallbackUserData)
-                setIsLoggedIn(true)
-                setPurchasedHours(0)
-                setUsedMinutes(0)
-              }
-            } catch (error) {
-              console.error("[Google Login] Sync error:", error)
-              // 同步失败，使用临时ID
-              const fallbackUserData = {
-                id: `google_${userEmail.replace(/[@.]/g, '_')}`,
-                email: userEmail,
-                name: userEmail.split('@')[0],
-                image: `https://ui-avatars.com/api/?name=${encodeURIComponent(userEmail.split('@')[0])}&background=random`,
-                provider: 'google',
-                sessionCount: 0
-              }
-              
-              localStorage.setItem("user", JSON.stringify(fallbackUserData))
-              setUser(fallbackUserData)
-              setIsLoggedIn(true)
-              setPurchasedHours(0)
-              setUsedMinutes(0)
-            }
-            
-            // 清除 URL 参数
-            window.history.replaceState({}, document.title, window.location.pathname)
-            
-            console.log("[Google Login] Fallback login complete!")
-          }
-        })
-        .catch(async (error) => {
-          console.error("[Google Login] Error fetching session, attempting sync:", error)
-          
-          // Emergency: 尝试同步用户
-          try {
-            const syncResponse = await fetch('/api/user/sync-google-user', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                email: userEmail,
-                name: userEmail.split('@')[0],
-                image: `https://ui-avatars.com/api/?name=${encodeURIComponent(userEmail.split('@')[0])}&background=random`,
-              }),
-            })
-            
-            if (syncResponse.ok) {
-              const syncData = await syncResponse.json()
-              console.log("[Google Login] Emergency sync successful:", syncData)
-              
-              const syncedUserData = {
-                id: syncData.user.id,
-                email: syncData.user.email,
-                name: syncData.user.name,
-                image: `https://ui-avatars.com/api/?name=${encodeURIComponent(syncData.user.name)}&background=random`,
-                provider: 'google',
-                sessionCount: 0
-              }
-              
-              localStorage.setItem("user", JSON.stringify(syncedUserData))
-              
-              // 强制更新状态
-              setUser(syncedUserData)
-              setIsLoggedIn(true)
-              
-              console.log("[Google Login] Emergency sync state updated:", syncedUserData.email)
-              
-              // 尝试获取时长
-              try {
-                const hoursResponse = await fetch(`/api/user/hours?userId=${syncedUserData.id}`)
-                if (hoursResponse.ok) {
-                  const hoursData = await hoursResponse.json()
-                  setPurchasedHours(hoursData.totalHours || 0)
-                  setUsedMinutes(hoursData.usedMinutes || 0)
-                }
-              } catch {
-                setPurchasedHours(0)
-                setUsedMinutes(0)
-              }
-            } else {
-              throw new Error("Sync failed")
-            }
-          } catch (syncError) {
-            console.error("[Google Login] Emergency sync failed, using temporary ID:", syncError)
-            
-            // 最后的fallback：使用临时ID
-            const fallbackUserData = {
-              id: `google_${userEmail.replace(/[@.]/g, '_')}`,
-              email: userEmail,
-              name: userEmail.split('@')[0],
-              image: `https://ui-avatars.com/api/?name=${encodeURIComponent(userEmail.split('@')[0])}&background=random`,
-              provider: 'google',
-              sessionCount: 0
-            }
-            
-            console.log("[Google Login] Final fallback, saving user:", fallbackUserData)
-            
-            localStorage.setItem("user", JSON.stringify(fallbackUserData))
-            setUser(fallbackUserData)
-            setIsLoggedIn(true)
-            setPurchasedHours(0)
-            setUsedMinutes(0)
-          }
-          
-          window.history.replaceState({}, document.title, window.location.pathname)
-          
-          console.log("[Google Login] Emergency login complete!")
+          }, 500)
         })
     } else {
       // 检查 localStorage 中是否有已保存的用户信息
