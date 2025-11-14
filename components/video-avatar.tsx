@@ -29,8 +29,7 @@ export function VideoAvatar({ isListening, isSpeaking, currentSpeaker, currentTe
   const status = getStatus()
 
   return (
-    <div className="relative w-full
-      aspect-video
+    <div className="relative w-full h-full
       rounded-2xl sm:rounded-3xl
       shadow-2xl
       overflow-hidden 
