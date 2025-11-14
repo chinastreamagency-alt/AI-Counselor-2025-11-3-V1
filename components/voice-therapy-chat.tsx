@@ -96,8 +96,15 @@ export default function VoiceTherapyChat() {
             
             // 保存到 localStorage
             localStorage.setItem("user", JSON.stringify(userData))
+            
+            // 强制更新状态，确保UI刷新
             setUser(userData)
             setIsLoggedIn(true)
+            
+            // 等待状态更新后再清除URL参数
+            setTimeout(() => {
+              console.log("[Google Login] State updated, user:", userData.email)
+            }, 100)
             
             // Fetch real-time hours from database
             try {
@@ -162,8 +169,12 @@ export default function VoiceTherapyChat() {
                 
                 // 保存到 localStorage
                 localStorage.setItem("user", JSON.stringify(syncedUserData))
+                
+                // 强制更新状态
                 setUser(syncedUserData)
                 setIsLoggedIn(true)
+                
+                console.log("[Google Login] Sync user state updated:", syncedUserData.email)
                 
                 // 获取用户时长
                 try {
@@ -255,8 +266,12 @@ export default function VoiceTherapyChat() {
               }
               
               localStorage.setItem("user", JSON.stringify(syncedUserData))
+              
+              // 强制更新状态
               setUser(syncedUserData)
               setIsLoggedIn(true)
+              
+              console.log("[Google Login] Emergency sync state updated:", syncedUserData.email)
               
               // 尝试获取时长
               try {
@@ -333,8 +348,12 @@ export default function VoiceTherapyChat() {
                   
                   // 更新localStorage
                   localStorage.setItem("user", JSON.stringify(updatedUser))
+                  
+                  // 强制更新状态
                   setUser(updatedUser)
                   setIsLoggedIn(true)
+                  
+                  console.log("[Load User] Updated to real ID:", updatedUser.id)
                   
                   // 获取时长
                   return fetch(`/api/user/hours?userId=${updatedUser.id}`)
@@ -1106,7 +1125,7 @@ export default function VoiceTherapyChat() {
           />
         
                {/* Control panel overlay - positioned at bottom center of video */}
-               <div className="absolute bottom-36 sm:bottom-16 left-0 right-0 flex flex-col items-center gap-3 sm:gap-4 px-4 z-50">
+               <div className="absolute bottom-44 sm:bottom-16 left-0 right-0 flex flex-col items-center gap-3 sm:gap-4 px-4 z-50">
                  {/* Status indicator */}
                  <div className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-white/90 backdrop-blur-md rounded-full border border-indigo-200 shadow-lg shadow-indigo-200/50">
             <div
