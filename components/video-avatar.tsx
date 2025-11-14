@@ -29,18 +29,15 @@ export function VideoAvatar({ isListening, isSpeaking, currentSpeaker, currentTe
   const status = getStatus()
 
   return (
-    <div className="relative w-full h-full
-      sm:w-full sm:h-screen sm:rounded-none sm:shadow-none
-      md:max-w-4xl md:aspect-video md:rounded-3xl md:shadow-3xl md:transform md:perspective-1000 md:rotate-y-2 md:hover:rotate-y-0 md:transition-all md:duration-500 md:hover:scale-105 md:float-animation md:breathing-glow
-      lg:max-w-5xl lg:shadow-4xl lg:hover:shadow-4xl
-      xl:max-w-6xl
-      overflow-hidden bg-gradient-to-br from-slate-50 to-gray-100">
+    <div className="relative w-full
+      aspect-video
+      rounded-2xl sm:rounded-3xl
+      shadow-2xl
+      overflow-hidden 
+      bg-gradient-to-br from-slate-50 to-gray-100">
       
-      {/* 3D 高级反光效果层 - 仅桌面显示 */}
-      <div className="absolute inset-0 premium-gradient pointer-events-none hidden md:block"></div>
-      
-      {/* 玻璃态效果层 - 仅桌面显示 */}
-      <div className="absolute inset-0 glass-effect pointer-events-none hidden md:block opacity-30"></div>
+      {/* 轻微的反光效果 - 不遮挡内容 */}
+      <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent pointer-events-none"></div>
       
       {/* 视频层 */}
       <video
@@ -57,12 +54,6 @@ export function VideoAvatar({ isListening, isSpeaking, currentSpeaker, currentTe
           type="video/mp4"
         />
       </video>
-      
-      {/* 3D 高级边框效果 - 仅桌面显示 */}
-      <div className="absolute inset-0 border-2 border-white/40 rounded-3xl pointer-events-none hidden md:block shadow-inner"></div>
-      
-      {/* 环境光效果 - 仅桌面显示 */}
-      <div className="absolute -inset-4 bg-gradient-radial from-blue-200/20 via-purple-200/10 to-transparent rounded-full blur-xl pointer-events-none hidden lg:block animate-pulse"></div>
 
       {/* Ambient overlay with breathing effect */}
       <div className={`absolute inset-0 transition-all duration-1000 pointer-events-none ${

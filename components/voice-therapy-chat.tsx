@@ -849,8 +849,8 @@ export default function VoiceTherapyChat() {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex items-center justify-center p-4 pt-20 pb-20">
-        <div className="relative w-full max-w-2xl">
+      <div className="flex-1 flex items-center justify-center p-4 pt-20 pb-24 sm:pb-28">
+        <div className="relative w-full max-w-xl sm:max-w-2xl lg:max-w-3xl">
           <VideoAvatar
             isListening={status === "listening"}
             isSpeaking={status === "speaking"}
@@ -971,7 +971,7 @@ export default function VoiceTherapyChat() {
       <div className="absolute bottom-0 left-0 right-0 z-50 px-4 py-3 sm:py-4 bg-gradient-to-t from-white/80 via-white/60 to-transparent backdrop-blur-sm">
         <div className="text-center">
           <p className="text-xs sm:text-sm text-slate-600 font-medium">
-            © 2024 Arina AI TECH LTD
+            © 2025 Arina AI TECH LTD
           </p>
           <p className="text-xs text-slate-500 mt-1">
             <a href="mailto:contact@arina-ai.tech" className="hover:text-indigo-600 transition-colors">
