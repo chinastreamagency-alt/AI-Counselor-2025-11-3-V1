@@ -865,8 +865,8 @@ export default function VoiceTherapyChat() {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex items-center justify-center p-2 sm:p-4 pt-20 pb-28">
-        <div className="relative w-full sm:max-w-4xl">
+      <div className="flex-1 flex items-center justify-center p-0 sm:p-4 pt-16 sm:pt-20 pb-24 sm:pb-28">
+        <div className="relative w-full h-full sm:h-auto sm:max-w-4xl">
           <VideoAvatar
             isListening={status === "listening"}
             isSpeaking={status === "speaking"}

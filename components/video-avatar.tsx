@@ -29,8 +29,9 @@ export function VideoAvatar({ isListening, isSpeaking, currentSpeaker, currentTe
   const status = getStatus()
 
   return (
-    <div className="relative w-full aspect-video
-      rounded-2xl sm:rounded-3xl
+    <div className="relative w-full
+      h-full sm:h-auto sm:aspect-video
+      rounded-none sm:rounded-3xl
       shadow-2xl
       overflow-hidden 
       bg-gradient-to-br from-slate-50 to-gray-100">
@@ -41,7 +42,7 @@ export function VideoAvatar({ isListening, isSpeaking, currentSpeaker, currentTe
       {/* 视频层 */}
       <video
         ref={videoRef}
-        className="w-full h-full object-cover relative z-10"
+        className="w-full h-full object-cover sm:object-contain relative z-10"
         loop
         muted
         playsInline
