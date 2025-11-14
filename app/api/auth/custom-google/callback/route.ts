@@ -164,7 +164,8 @@ export async function GET(request: NextRequest) {
     // 清除 state cookie
     cookieStore.delete('oauth_state')
     
-    console.log('登录成功！重定向到首页...')
+    console.log('登录成功！准备重定向...')
+    
     // 重定向到首页，带上完整的用户信息（以防cookie在手机端不工作）
     const redirectParams = new URLSearchParams({
       login: 'success',
@@ -173,7 +174,18 @@ export async function GET(request: NextRequest) {
       picture: user.picture || '',
       userId: supabaseUserId
     })
-    return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/?${redirectParams.toString()}`)
+    
+    const redirectUrl = `${process.env.NEXTAUTH_URL}/?${redirectParams.toString()}`
+    console.log('重定向URL:', redirectUrl)
+    console.log('URL参数:', {
+      login: 'success',
+      email: user.email,
+      name: user.name || '',
+      userId: supabaseUserId,
+      hasPicture: !!user.picture
+    })
+    
+    return NextResponse.redirect(redirectUrl)
     
   } catch (error) {
     console.error("❌ OAuth callback error:", error)

@@ -66,15 +66,26 @@ export default function VoiceTherapyChat() {
 
   useEffect(() => {
     // 首先检查 URL 参数中是否有登录成功的标记
+    console.log("[Page Load] Current URL:", window.location.href)
     const urlParams = new URLSearchParams(window.location.search)
+    console.log("[Page Load] URL search params:", window.location.search)
+    
     const loginSuccess = urlParams.get('login')
     const userEmail = urlParams.get('email')
     const userName = urlParams.get('name')
     const userPicture = urlParams.get('picture')
     const userId = urlParams.get('userId')
     
+    console.log("[Page Load] Parsed params:", {
+      login: loginSuccess,
+      email: userEmail,
+      name: userName,
+      picture: userPicture ? "exists" : "null",
+      userId: userId
+    })
+    
     if (loginSuccess === 'success' && userEmail && userId) {
-      console.log("[Google Login] Detected successful login from URL params")
+      console.log("[Google Login] ✅ Detected successful login from URL params")
       console.log("[Google Login] User ID:", userId, "Email:", userEmail)
       
       // 直接使用URL参数中的完整用户信息（最可靠的方式）
@@ -96,7 +107,12 @@ export default function VoiceTherapyChat() {
       setUser(userData)
       setIsLoggedIn(true)
       
-      console.log("[Google Login] User state updated successfully!")
+      console.log("[Google Login] ✅ User state updated successfully!")
+      console.log("[Google Login] Current user state:", { id: userData.id, email: userData.email })
+      console.log("[Google Login] isLoggedIn:", true)
+      
+      // 强制触发重渲染
+      window.dispatchEvent(new Event('storage'))
       
       // 获取用户时长
       fetch(`/api/user/hours?userId=${userData.id}`)
@@ -125,6 +141,14 @@ export default function VoiceTherapyChat() {
           }, 500)
         })
     } else {
+      console.log("[Page Load] ❌ Not a Google login redirect (missing params)")
+      if (loginSuccess) {
+        console.log("[Page Load] ⚠️ Login flag exists but missing required data:", {
+          hasEmail: !!userEmail,
+          hasUserId: !!userId
+        })
+      }
+      
       // 检查 localStorage 中是否有已保存的用户信息
       const storedUser = localStorage.getItem("user")
       if (storedUser) {
