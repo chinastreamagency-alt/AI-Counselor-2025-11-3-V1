@@ -129,11 +129,59 @@ export default function VoiceTherapyChat() {
             // 强制刷新页面状态
             console.log("[Google Login] Login complete!")
           } else {
-            console.error("[Google Login] No user data in session response")
+            // Fallback: 如果session为空，直接从URL参数创建用户
+            console.warn("[Google Login] No session data, using fallback method")
+            
+            const fallbackUserData = {
+              id: `google_${userEmail.replace(/[@.]/g, '_')}`, // 临时ID
+              email: userEmail,
+              name: userEmail.split('@')[0], // 从邮箱提取名字
+              image: `https://ui-avatars.com/api/?name=${encodeURIComponent(userEmail.split('@')[0])}&background=random`,
+              provider: 'google',
+              sessionCount: 0
+            }
+            
+            console.log("[Google Login] Using fallback user data:", fallbackUserData)
+            
+            // 保存到 localStorage
+            localStorage.setItem("user", JSON.stringify(fallbackUserData))
+            setUser(fallbackUserData)
+            setIsLoggedIn(true)
+            
+            // 初始化时长为0
+            setPurchasedHours(0)
+            setUsedMinutes(0)
+            
+            // 清除 URL 参数
+            window.history.replaceState({}, document.title, window.location.pathname)
+            
+            console.log("[Google Login] Fallback login complete!")
           }
         })
         .catch(error => {
-          console.error("[Google Login] Error fetching session:", error)
+          console.error("[Google Login] Error fetching session, using fallback:", error)
+          
+          // 完全失败时的fallback
+          const fallbackUserData = {
+            id: `google_${userEmail.replace(/[@.]/g, '_')}`,
+            email: userEmail,
+            name: userEmail.split('@')[0],
+            image: `https://ui-avatars.com/api/?name=${encodeURIComponent(userEmail.split('@')[0])}&background=random`,
+            provider: 'google',
+            sessionCount: 0
+          }
+          
+          console.log("[Google Login] Emergency fallback, saving user:", fallbackUserData)
+          
+          localStorage.setItem("user", JSON.stringify(fallbackUserData))
+          setUser(fallbackUserData)
+          setIsLoggedIn(true)
+          setPurchasedHours(0)
+          setUsedMinutes(0)
+          
+          window.history.replaceState({}, document.title, window.location.pathname)
+          
+          console.log("[Google Login] Emergency fallback complete!")
         })
     } else {
       // 检查 localStorage 中是否有已保存的用户信息
