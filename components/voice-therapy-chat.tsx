@@ -792,6 +792,8 @@ export default function VoiceTherapyChat() {
   }, [isAudioEnabled, speakText, startListening, isLoggedIn, purchasedHours, usedMinutes])
 
   const stopSession = useCallback(() => {
+    console.log("[v0] Stopping session and resetting state")
+
     shouldListenRef.current = false
     isAISpeakingRef.current = false
 
@@ -808,17 +810,25 @@ export default function VoiceTherapyChat() {
       audioRef.current.currentTime = 0
     }
 
+    // 停止浏览器 TTS
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel()
+    }
+
     if (sessionTimerRef.current) {
       clearInterval(sessionTimerRef.current)
+      sessionTimerRef.current = null
     }
 
     if (freeTrialTimerRef.current) {
       clearInterval(freeTrialTimerRef.current)
+      freeTrialTimerRef.current = null
     }
 
     setStatus("idle")
     setCurrentSpeaker(null)
     setCurrentText("")
+    setTranscript("") // 清空transcript显示
     setFreeTrialActive(false)
 
     if (currentSessionId && sessionStartTime && messages.length > 0) {

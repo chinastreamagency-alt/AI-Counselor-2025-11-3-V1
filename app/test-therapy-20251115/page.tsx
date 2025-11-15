@@ -30,6 +30,8 @@ export default function VoiceTherapyTestPage() {
   const sessionTimerRef = useRef<NodeJS.Timeout | null>(null)
   const isAISpeakingRef = useRef(false)
   const testUserId = useRef(`test-${Date.now()}`)
+  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null) // 用于检测用户说话停顿
+  const lastTranscriptRef = useRef("") // 记录最后一次识别的文本
 
   useEffect(() => {
     if (typeof window !== "undefined" && "webkitSpeechRecognition" in window) {
@@ -58,11 +60,28 @@ export default function VoiceTherapyTestPage() {
           }
         }
 
-        setTranscript(interimTranscript || finalTranscript)
+        const currentTranscript = interimTranscript || finalTranscript
+        setTranscript(currentTranscript)
 
-        if (finalTranscript.trim()) {
-          handleUserSpeech(finalTranscript.trim())
+        // 清除之前的静默计时器
+        if (silenceTimerRef.current) {
+          clearTimeout(silenceTimerRef.current)
         }
+
+        // 如果有最终文本，累积到 lastTranscriptRef
+        if (finalTranscript.trim()) {
+          lastTranscriptRef.current += finalTranscript
+          console.log("[Test] Accumulated transcript:", lastTranscriptRef.current)
+        }
+
+        // 设置新的静默计时器 - 2秒没有新的语音输入就发送
+        silenceTimerRef.current = setTimeout(() => {
+          if (lastTranscriptRef.current.trim()) {
+            console.log("[Test] User finished speaking, sending:", lastTranscriptRef.current)
+            handleUserSpeech(lastTranscriptRef.current.trim())
+            lastTranscriptRef.current = "" // 重置
+          }
+        }, 2000) // 2秒静默后发送
       }
 
       recognitionRef.current.onerror = (event: any) => {
@@ -148,16 +167,16 @@ export default function VoiceTherapyTestPage() {
       setCurrentText(text)
 
       try {
-        console.log("[Test] Requesting OpenAI TTS for text:", text.substring(0, 50) + "...")
+        console.log("[Test] Requesting ElevenLabs TTS for text:", text.substring(0, 50) + "...")
 
-        const response = await fetch("/api/openai-tts", {
+        const response = await fetch("/api/elevenlabs-tts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text }),
         })
 
         if (!response.ok) {
-          console.error("[Test] OpenAI TTS failed, falling back to browser TTS")
+          console.error("[Test] ElevenLabs TTS failed, falling back to browser TTS")
           useBrowserTTS(text)
           return
         }
@@ -179,9 +198,9 @@ export default function VoiceTherapyTestPage() {
           await audioRef.current.play()
         }
 
-        console.log("[Test] OpenAI TTS playback started")
+        console.log("[Test] ElevenLabs TTS playback started")
       } catch (error) {
-        console.error("[Test] Error with OpenAI TTS, falling back to browser TTS:", error)
+        console.error("[Test] Error with ElevenLabs TTS, falling back to browser TTS:", error)
         useBrowserTTS(text)
       }
     },
@@ -191,7 +210,7 @@ export default function VoiceTherapyTestPage() {
   // 浏览器内置 TTS 备用方案
   const useBrowserTTS = (text: string) => {
     console.log("[Test] Using browser TTS")
-    setElevenLabsError("Using browser voice (Edge TTS unavailable)")
+    setElevenLabsError("Using browser voice (ElevenLabs unavailable)")
 
     if ('speechSynthesis' in window) {
       const utterance = new SpeechSynthesisUtterance(text)
@@ -326,9 +345,23 @@ export default function VoiceTherapyTestPage() {
   }, [isAudioEnabled, speakText, startListening])
 
   const stopSession = useCallback(() => {
+    console.log("[Test] Stopping session and resetting all state")
+
     shouldListenRef.current = false
     isAISpeakingRef.current = false
 
+    // 清除所有计时器
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current)
+      silenceTimerRef.current = null
+    }
+
+    if (sessionTimerRef.current) {
+      clearInterval(sessionTimerRef.current)
+      sessionTimerRef.current = null
+    }
+
+    // 停止语音识别
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop()
@@ -337,18 +370,28 @@ export default function VoiceTherapyTestPage() {
       }
     }
 
+    // 停止音频播放
     if (audioRef.current) {
       audioRef.current.pause()
       audioRef.current.currentTime = 0
     }
 
-    if (sessionTimerRef.current) {
-      clearInterval(sessionTimerRef.current)
+    // 停止浏览器 TTS
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel()
     }
 
+    // 重置所有状态
     setStatus("idle")
     setCurrentSpeaker(null)
     setCurrentText("")
+    setTranscript("")
+    setMessages([]) // 清空对话历史
+    setSessionDuration(0)
+    setElevenLabsError(null)
+    lastTranscriptRef.current = ""
+
+    console.log("[Test] Session stopped, all state reset")
   }, [])
 
   const toggleAudio = useCallback(() => {
@@ -501,10 +544,10 @@ export default function VoiceTherapyTestPage() {
       <div className="absolute bottom-0 left-0 right-0 z-50 px-4 py-3 sm:py-4 bg-gradient-to-t from-white/80 via-white/60 to-transparent backdrop-blur-sm">
         <div className="text-center">
           <p className="text-xs sm:text-sm text-slate-600 font-medium">
-            测试版本 - Powered by Groq API + OpenAI TTS (HD)
+            测试版本 - Powered by Groq API + ElevenLabs TTS
           </p>
           <p className="text-xs text-slate-500 mt-1">
-            /test-therapy-20251115 | 真人级别语音
+            /test-therapy-20251115 | 顶级真人语音
           </p>
         </div>
       </div>
