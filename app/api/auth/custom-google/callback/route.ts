@@ -105,29 +105,61 @@ export async function GET(request: NextRequest) {
     
     const user = await userResponse.json()
     console.log('获取到用户信息:', { email: user.email, name: user.name })
-    
+
     // 🔥 关键修复：在 Supabase Auth 中创建或获取用户
     const { createClient } = await import("@supabase/supabase-js")
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
-    
+
     let supabaseUserId: string
-    
-    // 先尝试在 users 表中查找用户
-    const { data: existingUserRecord } = await supabaseAdmin
-      .from('users')
-      .select('id')
-      .eq('email', user.email)
-      .single()
-    
-    if (existingUserRecord) {
-      // 用户已存在
-      supabaseUserId = existingUserRecord.id
-      console.log('用户已存在:', supabaseUserId)
+
+    // 先尝试在 auth.users 表中查找用户（通过 email）
+    const { data: existingAuthUser, error: authQueryError } = await supabaseAdmin.auth.admin.listUsers()
+
+    console.log('查询现有用户:', {
+      total: existingAuthUser?.users?.length,
+      hasError: !!authQueryError,
+      error: authQueryError
+    })
+
+    const existingUser = existingAuthUser?.users?.find(u => u.email === user.email)
+
+    if (existingUser) {
+      // 用户已存在于 auth 系统
+      supabaseUserId = existingUser.id
+      console.log('✅ 用户已存在于 auth 系统:', supabaseUserId)
+
+      // 检查 users 表中是否有记录
+      const { data: userRecord } = await supabaseAdmin
+        .from('users')
+        .select('id')
+        .eq('id', supabaseUserId)
+        .single()
+
+      if (!userRecord) {
+        console.log('users 表中无记录，准备创建...')
+        // 在 users 表中创建记录
+        const { error: dbError } = await supabaseAdmin.from('users').insert({
+          id: supabaseUserId,
+          email: user.email,
+          name: user.name,
+          total_hours: 0,
+          used_hours: 0,
+        })
+
+        if (dbError) {
+          console.error('创建 users 表记录失败:', dbError)
+          // 不阻止登录，因为用户已在 auth 表中
+        } else {
+          console.log('✅ users 表记录已创建')
+        }
+      }
     } else {
       // 创建新用户
+      console.log('准备创建新用户:', user.email)
+
       const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
         email: user.email,
         email_confirm: true,
@@ -137,10 +169,27 @@ export async function GET(request: NextRequest) {
           provider: 'google',
         },
       })
-      
-      if (createError || !newUser.user) {
-        console.error('创建 Supabase 用户失败:', createError)
-        return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/?error=user_creation_failed`)
+
+      if (createError) {
+        console.error('❌ 创建 Supabase Auth 用户失败:', {
+          error: createError,
+          message: createError.message,
+          status: createError.status,
+          code: createError.code
+        })
+
+        // 提供更详细的错误信息
+        const errorDetails = encodeURIComponent(JSON.stringify({
+          message: createError.message,
+          code: createError.code,
+          status: createError.status
+        }))
+        return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/?error=user_creation_failed&details=${errorDetails}`)
+      }
+
+      if (!newUser.user) {
+        console.error('❌ 创建用户返回空数据')
+        return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/?error=user_creation_failed&details=${encodeURIComponent('No user data returned')}`)
       }
       
       supabaseUserId = newUser.user.id
