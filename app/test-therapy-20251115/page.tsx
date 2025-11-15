@@ -31,6 +31,7 @@ export default function VoiceTherapyTestPage() {
   const [currentText, setCurrentText] = useState("")
   const [displayedSubtitle, setDisplayedSubtitle] = useState<string[]>([]) // 改为数组，最多显示2行
   const [elevenLabsError, setElevenLabsError] = useState<string | null>(null)
+  const [waitingCountdown, setWaitingCountdown] = useState(0) // 倒计时：8秒等待
 
   const recognitionRef = useRef<any>(null)
   const audioRef = useRef<HTMLAudioElement>(null)
@@ -42,47 +43,61 @@ export default function VoiceTherapyTestPage() {
   const lastTranscriptRef = useRef("")
   const subtitleTimerRef = useRef<NodeJS.Timeout | null>(null) // 字幕滚动计时器
   const currentSentenceIndexRef = useRef(0) // 当前显示到第几句
+  const countdownTimerRef = useRef<NodeJS.Timeout | null>(null) // 8秒倒计时计时器
 
-  // 将文本分割成句子（按句号、问号、感叹号分割）
-  const splitIntoSentences = (text: string): string[] => {
-    const sentences = text.match(/[^.!?]+[.!?]+/g) || [text]
-    return sentences.map(s => s.trim()).filter(s => s.length > 0)
+  // 将文本分割成单词，用于逐字显示（模拟真实TTS速度）
+  const splitIntoWords = (text: string): string[] => {
+    return text.split(' ').filter(w => w.length > 0)
   }
 
-  // 逐句显示字幕（每句显示约3-5秒，根据长度调整）
-  const displaySubtitlesSequentially = useCallback((fullText: string) => {
-    const sentences = splitIntoSentences(fullText)
-    currentSentenceIndexRef.current = 0
+  // 逐字显示字幕（与语音同步）- 每个单词约250ms
+  const displaySubtitlesSyncWithSpeech = useCallback((fullText: string) => {
+    const words = splitIntoWords(fullText)
+    let currentWordIndex = 0
     setDisplayedSubtitle([]) // 清空之前的字幕
 
-    const showNextSentence = () => {
-      const index = currentSentenceIndexRef.current
-      if (index >= sentences.length) {
-        // 所有句子都显示完了
+    const showNextWord = () => {
+      if (currentWordIndex >= words.length) {
+        // 所有单词都显示完了
         if (subtitleTimerRef.current) {
-          clearTimeout(subtitleTimerRef.current)
+          clearInterval(subtitleTimerRef.current)
         }
         return
       }
 
-      const sentence = sentences[index]
+      const word = words[currentWordIndex]
 
-      // 更新字幕显示（最多2行）
       setDisplayedSubtitle(prev => {
-        const newSubtitles = [...prev, sentence]
+        // 将新单词添加到当前字幕
+        const currentText = prev.join(' ') + (prev.length > 0 ? ' ' : '') + word
+
+        // 按最大长度分割成行（每行约60个字符）
+        const maxCharsPerLine = 60
+        const lines: string[] = []
+        let currentLine = ''
+
+        currentText.split(' ').forEach(w => {
+          if ((currentLine + ' ' + w).length > maxCharsPerLine && currentLine.length > 0) {
+            lines.push(currentLine)
+            currentLine = w
+          } else {
+            currentLine = currentLine.length > 0 ? currentLine + ' ' + w : w
+          }
+        })
+
+        if (currentLine) {
+          lines.push(currentLine)
+        }
+
         // 只保留最后2行
-        return newSubtitles.slice(-2)
+        return lines.slice(-2)
       })
 
-      currentSentenceIndexRef.current++
-
-      // 根据句子长度计算显示时间（每个字符约80ms，最少2秒，最多6秒）
-      const displayDuration = Math.min(Math.max(sentence.length * 80, 2000), 6000)
-
-      subtitleTimerRef.current = setTimeout(showNextSentence, displayDuration)
+      currentWordIndex++
     }
 
-    showNextSentence()
+    // 每250ms显示一个单词（模拟真实语音速度）
+    subtitleTimerRef.current = setInterval(showNextWord, 250)
   }, [])
 
   useEffect(() => {
@@ -126,14 +141,29 @@ export default function VoiceTherapyTestPage() {
           console.log("[Test] Accumulated transcript:", lastTranscriptRef.current)
         }
 
-        // 设置新的静默计时器 - 2秒没有新的语音输入就发送
+        // 设置新的静默计时器 - 8秒没有新的语音输入就发送，并显示倒计时
         silenceTimerRef.current = setTimeout(() => {
           if (lastTranscriptRef.current.trim()) {
             console.log("[Test] User finished speaking, sending:", lastTranscriptRef.current)
             handleUserSpeech(lastTranscriptRef.current.trim())
             lastTranscriptRef.current = "" // 重置
+            setWaitingCountdown(0) // 重置倒计时
           }
-        }, 2000) // 2秒静默后发送
+        }, 8000) // 8秒静默后发送
+
+        // 启动倒计时显示
+        setWaitingCountdown(8)
+        let countdown = 8
+        if (countdownTimerRef.current) {
+          clearInterval(countdownTimerRef.current)
+        }
+        countdownTimerRef.current = setInterval(() => {
+          countdown--
+          setWaitingCountdown(countdown)
+          if (countdown <= 0 && countdownTimerRef.current) {
+            clearInterval(countdownTimerRef.current)
+          }
+        }, 1000)
       }
 
       recognitionRef.current.onerror = (event: any) => {
@@ -218,8 +248,8 @@ export default function VoiceTherapyTestPage() {
       setCurrentSpeaker("assistant")
       setCurrentText(text)
 
-      // 启动逐句字幕显示
-      displaySubtitlesSequentially(text)
+      // 启动逐字字幕显示（与语音同步）
+      displaySubtitlesSyncWithSpeech(text)
 
       try {
         console.log("[Test] Requesting ElevenLabs TTS for text:", text.substring(0, 50) + "...")
@@ -260,7 +290,7 @@ export default function VoiceTherapyTestPage() {
         useBrowserTTS(text)
       }
     },
-    [startListening, stopListening, displaySubtitlesSequentially],
+    [startListening, stopListening, displaySubtitlesSyncWithSpeech],
   )
 
   // 浏览器内置 TTS 备用方案
@@ -421,8 +451,13 @@ export default function VoiceTherapyTestPage() {
     }
 
     if (subtitleTimerRef.current) {
-      clearTimeout(subtitleTimerRef.current)
+      clearInterval(subtitleTimerRef.current)
       subtitleTimerRef.current = null
+    }
+
+    if (countdownTimerRef.current) {
+      clearInterval(countdownTimerRef.current)
+      countdownTimerRef.current = null
     }
 
     // 停止语音识别
@@ -454,6 +489,7 @@ export default function VoiceTherapyTestPage() {
     setSessionDuration(0)
     setElevenLabsError(null)
     setDisplayedSubtitle([]) // 清空字幕
+    setWaitingCountdown(0) // 清空倒计时
     lastTranscriptRef.current = ""
     currentSentenceIndexRef.current = 0
 
@@ -548,17 +584,36 @@ export default function VoiceTherapyTestPage() {
                    </div>
                  )}
 
-                 {/* AI 说话字幕 - 逐句显示，最多2行 */}
+                 {/* 等待用户说完话 - 8秒倒计时 */}
+                 {waitingCountdown > 0 && status === "listening" && (
+                   <div className="w-full max-w-md px-4">
+                     <div className="bg-gradient-to-r from-blue-500/20 to-green-500/20 backdrop-blur-md rounded-xl px-6 py-4 border border-blue-400/30 shadow-lg">
+                       <div className="flex items-center justify-center gap-3">
+                         <div className="relative">
+                           <div className="w-12 h-12 rounded-full border-4 border-blue-300/30"></div>
+                           <div className="absolute inset-0 flex items-center justify-center">
+                             <span className="text-2xl font-bold text-blue-400">{waitingCountdown}</span>
+                           </div>
+                         </div>
+                         <span className="text-blue-100 text-sm font-medium">
+                           Waiting for you to finish...
+                         </span>
+                       </div>
+                     </div>
+                   </div>
+                 )}
+
+                 {/* AI 说话字幕 - 逐字显示，最多2行 */}
                  {displayedSubtitle.length > 0 && status === "speaking" && (
-                   <div className="w-full max-w-2xl px-4">
-                     <div className="bg-black/80 backdrop-blur-md rounded-xl px-4 sm:px-6 py-3 sm:py-4 shadow-2xl border border-white/10">
-                       <div className="space-y-1">
-                         {displayedSubtitle.map((sentence, index) => (
+                   <div className="w-full max-w-3xl px-4">
+                     <div className="bg-black/85 backdrop-blur-md rounded-xl px-4 sm:px-6 py-3 sm:py-4 shadow-2xl border border-white/10">
+                       <div className="space-y-1.5">
+                         {displayedSubtitle.map((line, index) => (
                            <p
                              key={index}
-                             className="text-white text-xs sm:text-sm leading-relaxed text-center break-words animate-fade-in"
+                             className="text-white text-sm sm:text-base leading-relaxed text-center break-words"
                            >
-                             {sentence}
+                             {line}
                            </p>
                          ))}
                        </div>
@@ -567,10 +622,10 @@ export default function VoiceTherapyTestPage() {
                  )}
 
                  {/* 用户说话字幕 */}
-                 {transcript && status === "listening" && displayedSubtitle.length === 0 && (
-                   <div className="w-full max-w-2xl px-4">
+                 {transcript && status === "listening" && displayedSubtitle.length === 0 && waitingCountdown === 0 && (
+                   <div className="w-full max-w-3xl px-4">
                      <div className="bg-green-500/20 backdrop-blur-md rounded-xl px-4 sm:px-6 py-2 sm:py-3 border border-green-400/30">
-                       <p className="text-green-100 text-xs sm:text-sm text-center italic break-words">{transcript}</p>
+                       <p className="text-green-100 text-sm sm:text-base text-center italic break-words">{transcript}</p>
                      </div>
                    </div>
                  )}
