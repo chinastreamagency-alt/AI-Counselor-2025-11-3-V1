@@ -32,6 +32,7 @@ export default function VoiceTherapyTestPage() {
   const [displayedSubtitle, setDisplayedSubtitle] = useState<string[]>([]) // 改为数组，最多显示2行
   const [elevenLabsError, setElevenLabsError] = useState<string | null>(null)
   const [waitingCountdown, setWaitingCountdown] = useState(0) // 倒计时：8秒等待
+  const [isUserSpeaking, setIsUserSpeaking] = useState(false) // 用户是否正在说话
 
   const recognitionRef = useRef<any>(null)
   const audioRef = useRef<HTMLAudioElement>(null)
@@ -50,57 +51,52 @@ export default function VoiceTherapyTestPage() {
     return text.split(' ').filter(w => w.length > 0)
   }
 
-  // 逐字显示字幕（与语音同步）- 延迟1500ms后开始，确保语音先播放
+  // 智能字幕显示 - 监听音频播放进度，实时同步
   const displaySubtitlesSyncWithSpeech = useCallback((fullText: string) => {
     const words = splitIntoWords(fullText)
     let currentWordIndex = 0
     setDisplayedSubtitle([]) // 清空之前的字幕
 
-    // 延迟1500ms（1.5秒）后开始显示字幕，确保语音先播放
-    setTimeout(() => {
-      const showNextWord = () => {
-        if (currentWordIndex >= words.length) {
-          // 所有单词都显示完了
-          if (subtitleTimerRef.current) {
-            clearInterval(subtitleTimerRef.current)
-          }
-          return
+    // 不使用延迟，直接开始显示（由音频 onplay 事件触发）
+    const showNextWord = () => {
+      if (currentWordIndex >= words.length) {
+        if (subtitleTimerRef.current) {
+          clearInterval(subtitleTimerRef.current)
         }
-
-        const word = words[currentWordIndex]
-
-        setDisplayedSubtitle(prev => {
-          // 将新单词添加到当前字幕
-          const currentText = prev.join(' ') + (prev.length > 0 ? ' ' : '') + word
-
-          // 按最大长度分割成行（每行约40个字符，更窄）
-          const maxCharsPerLine = 40
-          const lines: string[] = []
-          let currentLine = ''
-
-          currentText.split(' ').forEach(w => {
-            if ((currentLine + ' ' + w).length > maxCharsPerLine && currentLine.length > 0) {
-              lines.push(currentLine)
-              currentLine = w
-            } else {
-              currentLine = currentLine.length > 0 ? currentLine + ' ' + w : w
-            }
-          })
-
-          if (currentLine) {
-            lines.push(currentLine)
-          }
-
-          // 只保留最后2行
-          return lines.slice(-2)
-        })
-
-        currentWordIndex++
+        return
       }
 
-      // 每250ms显示一个单词（模拟真实语音速度）
-      subtitleTimerRef.current = setInterval(showNextWord, 250)
-    }, 1500) // 延迟1.5秒后开始
+      const word = words[currentWordIndex]
+
+      setDisplayedSubtitle(prev => {
+        const currentText = prev.join(' ') + (prev.length > 0 ? ' ' : '') + word
+
+        // 每行30个字符（更保守）
+        const maxCharsPerLine = 30
+        const lines: string[] = []
+        let currentLine = ''
+
+        currentText.split(' ').forEach(w => {
+          if ((currentLine + ' ' + w).length > maxCharsPerLine && currentLine.length > 0) {
+            lines.push(currentLine)
+            currentLine = w
+          } else {
+            currentLine = currentLine.length > 0 ? currentLine + ' ' + w : w
+          }
+        })
+
+        if (currentLine) {
+          lines.push(currentLine)
+        }
+
+        return lines.slice(-2)
+      })
+
+      currentWordIndex++
+    }
+
+    // 每250ms显示一个单词
+    subtitleTimerRef.current = setInterval(showNextWord, 250)
   }, [])
 
   useEffect(() => {
@@ -133,6 +129,10 @@ export default function VoiceTherapyTestPage() {
         const currentTranscript = interimTranscript || finalTranscript
         setTranscript(currentTranscript)
 
+        // 用户正在说话
+        setIsUserSpeaking(true)
+        setWaitingCountdown(0) // 说话时不显示倒计时
+
         // 清除之前的静默计时器和倒计时
         if (silenceTimerRef.current) {
           clearTimeout(silenceTimerRef.current)
@@ -140,9 +140,6 @@ export default function VoiceTherapyTestPage() {
         if (countdownTimerRef.current) {
           clearInterval(countdownTimerRef.current)
         }
-
-        // 用户正在说话时，不显示倒计时
-        setWaitingCountdown(0)
 
         // 如果有最终文本，累积到 lastTranscriptRef
         if (finalTranscript.trim()) {
@@ -152,29 +149,31 @@ export default function VoiceTherapyTestPage() {
 
         // 设置新的静默计时器 - 8秒没有新的语音输入就发送
         silenceTimerRef.current = setTimeout(() => {
-          if (lastTranscriptRef.current.trim()) {
-            console.log("[Test] User finished speaking, sending:", lastTranscriptRef.current)
-            handleUserSpeech(lastTranscriptRef.current.trim())
-            lastTranscriptRef.current = "" // 重置
-            setWaitingCountdown(0) // 重置倒计时
-          }
-        }, 8000) // 8秒静默后发送
+          // 用户停止说话
+          setIsUserSpeaking(false)
 
-        // 只在有累积文本时，才启动倒计时显示（用户停止说话后）
-        if (lastTranscriptRef.current.trim() || finalTranscript.trim()) {
-          // 延迟100ms后开始倒计时（确保用户已停止说话）
-          setTimeout(() => {
+          if (lastTranscriptRef.current.trim()) {
+            // 开始显示8秒倒计时
             setWaitingCountdown(8)
+            setTranscript("") // 清空transcript，显示倒计时
+
             let countdown = 8
             countdownTimerRef.current = setInterval(() => {
               countdown--
               setWaitingCountdown(countdown)
-              if (countdown <= 0 && countdownTimerRef.current) {
-                clearInterval(countdownTimerRef.current)
+              if (countdown <= 0) {
+                if (countdownTimerRef.current) {
+                  clearInterval(countdownTimerRef.current)
+                }
+                // 倒计时结束，发送用户输入
+                console.log("[Test] Countdown finished, sending:", lastTranscriptRef.current)
+                handleUserSpeech(lastTranscriptRef.current.trim())
+                lastTranscriptRef.current = ""
+                setWaitingCountdown(0)
               }
             }, 1000)
-          }, 100)
-        }
+          }
+        }, 8000) // 8秒静默后开始倒计时
       }
 
       recognitionRef.current.onerror = (event: any) => {
@@ -259,9 +258,6 @@ export default function VoiceTherapyTestPage() {
       setCurrentSpeaker("assistant")
       setCurrentText(text)
 
-      // 启动逐字字幕显示（与语音同步）
-      displaySubtitlesSyncWithSpeech(text)
-
       try {
         console.log("[Test] Requesting ElevenLabs TTS for text:", text.substring(0, 50) + "...")
 
@@ -282,16 +278,26 @@ export default function VoiceTherapyTestPage() {
 
         if (audioRef.current) {
           audioRef.current.src = audioUrl
+
+          // 监听音频开始播放事件 - 智能同步
+          audioRef.current.onplay = () => {
+            console.log("[Test] Audio started playing, starting subtitles")
+            // 音频开始播放时，才开始显示字幕
+            displaySubtitlesSyncWithSpeech(text)
+          }
+
           audioRef.current.onended = () => {
             console.log("[Test] Audio playback ended")
             isAISpeakingRef.current = false
             setDisplayedSubtitle([]) // 清空字幕
             setTimeout(() => startListening(), 500)
           }
+
           audioRef.current.onerror = () => {
             console.error("[Test] Audio playback error, falling back to browser TTS")
             useBrowserTTS(text)
           }
+
           await audioRef.current.play()
         }
 
@@ -596,18 +602,18 @@ export default function VoiceTherapyTestPage() {
                  )}
 
                  {/* 等待用户说完话 - 8秒倒计时（只在停止说话后显示）*/}
-                 {waitingCountdown > 0 && status === "listening" && !transcript && (
-                   <div className="w-full max-w-md px-4">
-                     <div className="bg-gradient-to-r from-blue-500/20 to-green-500/20 backdrop-blur-md rounded-xl px-6 py-4 border border-blue-400/30 shadow-lg">
+                 {waitingCountdown > 0 && status === "listening" && (
+                   <div className="w-[90%] max-w-sm px-2">
+                     <div className="bg-gradient-to-r from-blue-500/20 to-green-500/20 backdrop-blur-md rounded-xl px-4 py-3 border border-blue-400/30 shadow-lg">
                        <div className="flex items-center justify-center gap-3">
                          <div className="relative">
-                           <div className="w-12 h-12 rounded-full border-4 border-blue-300/30"></div>
+                           <div className="w-10 h-10 rounded-full border-4 border-blue-300/30"></div>
                            <div className="absolute inset-0 flex items-center justify-center">
-                             <span className="text-2xl font-bold text-blue-400">{waitingCountdown}</span>
+                             <span className="text-xl font-bold text-blue-400">{waitingCountdown}</span>
                            </div>
                          </div>
-                         <span className="text-blue-100 text-sm font-medium">
-                           Listening... Take your time
+                         <span className="text-blue-100 text-xs font-medium">
+                           Take your time...
                          </span>
                        </div>
                      </div>
@@ -616,13 +622,13 @@ export default function VoiceTherapyTestPage() {
 
                  {/* AI 说话字幕 - 逐字显示，最多2行 */}
                  {displayedSubtitle.length > 0 && status === "speaking" && (
-                   <div className="w-full max-w-md px-4">
-                     <div className="bg-black/85 backdrop-blur-md rounded-lg px-3 sm:px-4 py-2 sm:py-2.5 shadow-2xl border border-white/10">
+                   <div className="w-[90%] max-w-sm px-2">
+                     <div className="bg-black/85 backdrop-blur-md rounded-lg px-3 py-2 shadow-2xl border border-white/10">
                        <div className="space-y-0.5">
                          {displayedSubtitle.map((line, index) => (
                            <p
                              key={index}
-                             className="text-white text-xs leading-snug text-center break-words"
+                             className="text-white text-[11px] leading-tight text-center break-words"
                            >
                              {line}
                            </p>
@@ -632,11 +638,11 @@ export default function VoiceTherapyTestPage() {
                    </div>
                  )}
 
-                 {/* 用户说话字幕 - 只在没有倒计时时显示 */}
-                 {transcript && status === "listening" && waitingCountdown === 0 && (
-                   <div className="w-full max-w-md px-4">
-                     <div className="bg-green-500/20 backdrop-blur-md rounded-lg px-3 sm:px-4 py-2 border border-green-400/30">
-                       <p className="text-green-100 text-xs leading-snug text-center italic break-words">{transcript}</p>
+                 {/* 用户说话字幕 - 只在正在说话且没有倒计时时显示 */}
+                 {transcript && status === "listening" && waitingCountdown === 0 && isUserSpeaking && (
+                   <div className="w-[90%] max-w-sm px-2">
+                     <div className="bg-green-500/20 backdrop-blur-md rounded-lg px-3 py-2 border border-green-400/30">
+                       <p className="text-green-100 text-[11px] leading-tight text-center italic break-words">{transcript}</p>
                      </div>
                    </div>
                  )}
