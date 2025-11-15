@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 
-export default function TestLoginPage() {
+function TestLoginContent() {
   const searchParams = useSearchParams()
   const [logs, setLogs] = useState<string[]>([])
   const [userData, setUserData] = useState<any>(null)
@@ -168,6 +168,21 @@ export default function TestLoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function TestLoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-4 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <p className="mt-4 text-gray-600">加载中...</p>
+        </div>
+      </div>
+    }>
+      <TestLoginContent />
+    </Suspense>
   )
 }
 
