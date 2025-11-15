@@ -29,10 +29,11 @@ export default function VoiceTherapyTestPage() {
   const [sessionDuration, setSessionDuration] = useState(0)
   const [currentSpeaker, setCurrentSpeaker] = useState<"user" | "assistant" | null>(null)
   const [currentText, setCurrentText] = useState("")
-  const [displayedSubtitle, setDisplayedSubtitle] = useState<string[]>([]) // 改为数组，最多显示2行
+  const [displayedSubtitle, setDisplayedSubtitle] = useState<string[]>([]) // 改为数组，最多显示4行
   const [elevenLabsError, setElevenLabsError] = useState<string | null>(null)
   const [waitingCountdown, setWaitingCountdown] = useState(0) // 倒计时：8秒等待
   const [isUserSpeaking, setIsUserSpeaking] = useState(false) // 用户是否正在说话
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false) // 音频是否真正播放
 
   const recognitionRef = useRef<any>(null)
   const audioRef = useRef<HTMLAudioElement>(null)
@@ -57,7 +58,6 @@ export default function VoiceTherapyTestPage() {
     let currentWordIndex = 0
     setDisplayedSubtitle([]) // 清空之前的字幕
 
-    // 不使用延迟，直接开始显示（由音频 onplay 事件触发）
     const showNextWord = () => {
       if (currentWordIndex >= words.length) {
         if (subtitleTimerRef.current) {
@@ -71,8 +71,8 @@ export default function VoiceTherapyTestPage() {
       setDisplayedSubtitle(prev => {
         const currentText = prev.join(' ') + (prev.length > 0 ? ' ' : '') + word
 
-        // 每行30个字符（更保守）
-        const maxCharsPerLine = 30
+        // 每行25个字符（更窄，适配视频宽度），最多4行
+        const maxCharsPerLine = 25
         const lines: string[] = []
         let currentLine = ''
 
@@ -89,14 +89,15 @@ export default function VoiceTherapyTestPage() {
           lines.push(currentLine)
         }
 
-        return lines.slice(-2)
+        // 只保留最后4行
+        return lines.slice(-4)
       })
 
       currentWordIndex++
     }
 
-    // 每250ms显示一个单词
-    subtitleTimerRef.current = setInterval(showNextWord, 250)
+    // 每200ms显示一个单词（更快，更同步）
+    subtitleTimerRef.current = setInterval(showNextWord, 200)
   }, [])
 
   useEffect(() => {
@@ -253,7 +254,9 @@ export default function VoiceTherapyTestPage() {
       stopListening()
       isAISpeakingRef.current = true
 
-      setStatus("speaking")
+      // 初始状态：processing（思考中）
+      setStatus("processing")
+      setIsAudioPlaying(false)
       setElevenLabsError(null)
       setCurrentSpeaker("assistant")
       setCurrentText(text)
@@ -282,6 +285,8 @@ export default function VoiceTherapyTestPage() {
           // 监听音频开始播放事件 - 智能同步
           audioRef.current.onplay = () => {
             console.log("[Test] Audio started playing, starting subtitles")
+            setStatus("speaking") // 音频真正播放时才改为 speaking
+            setIsAudioPlaying(true)
             // 音频开始播放时，才开始显示字幕
             displaySubtitlesSyncWithSpeech(text)
           }
@@ -289,6 +294,7 @@ export default function VoiceTherapyTestPage() {
           audioRef.current.onended = () => {
             console.log("[Test] Audio playback ended")
             isAISpeakingRef.current = false
+            setIsAudioPlaying(false)
             setDisplayedSubtitle([]) // 清空字幕
             setTimeout(() => startListening(), 500)
           }
@@ -557,10 +563,10 @@ export default function VoiceTherapyTestPage() {
             currentText={currentText}
           />
 
-               {/* Control panel overlay - positioned at bottom center of video */}
-               <div className="absolute bottom-44 sm:bottom-16 left-0 right-0 flex flex-col items-center gap-3 sm:gap-4 px-4 z-50">
+               {/* Control panel overlay - positioned at TOP (forehead area) */}
+               <div className="absolute top-12 sm:top-16 left-0 right-0 flex flex-col items-center gap-2 px-4 z-50">
                  {/* Status indicator */}
-                 <div className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-white/90 backdrop-blur-md rounded-full border border-indigo-200 shadow-lg shadow-indigo-200/50">
+                 <div className="inline-flex items-center gap-2 px-3 py-1 sm:px-4 sm:py-1.5 bg-white/90 backdrop-blur-md rounded-full border border-indigo-200 shadow-lg">
             <div
               className={`w-2 h-2 rounded-full ${
                 status === "listening"
@@ -572,7 +578,7 @@ export default function VoiceTherapyTestPage() {
                       : "bg-gray-400"
               }`}
             />
-                   <span className="text-xs sm:text-sm font-medium text-slate-700">
+                   <span className="text-xs font-medium text-slate-700">
               {status === "idle"
                 ? "Ready"
                 : status === "listening"
@@ -587,15 +593,15 @@ export default function VoiceTherapyTestPage() {
 
                  {/* AI 思考中的加载动画 */}
                  {status === "processing" && (
-                   <div className="w-full max-w-md px-4">
-                     <div className="bg-gradient-to-r from-purple-500/20 to-cyan-500/20 backdrop-blur-md rounded-xl px-6 py-4 border border-purple-400/30 shadow-lg">
+                   <div className="w-[85%] max-w-sm px-2">
+                     <div className="bg-gradient-to-r from-purple-500/20 to-cyan-500/20 backdrop-blur-md rounded-lg px-4 py-2 border border-purple-400/30 shadow-lg">
                        <div className="flex items-center justify-center gap-2">
                          <div className="flex gap-1">
-                           <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
-                           <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
-                           <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
+                           <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
+                           <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
+                           <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
                          </div>
-                         <span className="text-purple-100 text-sm font-medium ml-2">AI is thinking...</span>
+                         <span className="text-purple-100 text-xs font-medium">AI is thinking...</span>
                        </div>
                      </div>
                    </div>
@@ -603,16 +609,16 @@ export default function VoiceTherapyTestPage() {
 
                  {/* 等待用户说完话 - 8秒倒计时（只在停止说话后显示）*/}
                  {waitingCountdown > 0 && status === "listening" && (
-                   <div className="w-[90%] max-w-sm px-2">
-                     <div className="bg-gradient-to-r from-blue-500/20 to-green-500/20 backdrop-blur-md rounded-xl px-4 py-3 border border-blue-400/30 shadow-lg">
-                       <div className="flex items-center justify-center gap-3">
+                   <div className="w-[85%] max-w-sm px-2">
+                     <div className="bg-gradient-to-r from-blue-500/20 to-green-500/20 backdrop-blur-md rounded-lg px-3 py-2 border border-blue-400/30 shadow-lg">
+                       <div className="flex items-center justify-center gap-2">
                          <div className="relative">
-                           <div className="w-10 h-10 rounded-full border-4 border-blue-300/30"></div>
+                           <div className="w-8 h-8 rounded-full border-3 border-blue-300/30"></div>
                            <div className="absolute inset-0 flex items-center justify-center">
-                             <span className="text-xl font-bold text-blue-400">{waitingCountdown}</span>
+                             <span className="text-base font-bold text-blue-400">{waitingCountdown}</span>
                            </div>
                          </div>
-                         <span className="text-blue-100 text-xs font-medium">
+                         <span className="text-blue-100 text-[10px] font-medium">
                            Take your time...
                          </span>
                        </div>
@@ -620,15 +626,15 @@ export default function VoiceTherapyTestPage() {
                    </div>
                  )}
 
-                 {/* AI 说话字幕 - 逐字显示，最多2行 */}
+                 {/* AI 说话字幕 - 逐字显示，最多4行 */}
                  {displayedSubtitle.length > 0 && status === "speaking" && (
-                   <div className="w-[90%] max-w-sm px-2">
-                     <div className="bg-black/85 backdrop-blur-md rounded-lg px-3 py-2 shadow-2xl border border-white/10">
-                       <div className="space-y-0.5">
+                   <div className="w-[85%] max-w-sm px-2">
+                     <div className="bg-black/85 backdrop-blur-md rounded-md px-3 py-1.5 shadow-2xl border border-white/10">
+                       <div className="space-y-0">
                          {displayedSubtitle.map((line, index) => (
                            <p
                              key={index}
-                             className="text-white text-[11px] leading-tight text-center break-words"
+                             className="text-white text-[10px] leading-snug text-center break-words"
                            >
                              {line}
                            </p>
@@ -640,57 +646,57 @@ export default function VoiceTherapyTestPage() {
 
                  {/* 用户说话字幕 - 只在正在说话且没有倒计时时显示 */}
                  {transcript && status === "listening" && waitingCountdown === 0 && isUserSpeaking && (
-                   <div className="w-[90%] max-w-sm px-2">
-                     <div className="bg-green-500/20 backdrop-blur-md rounded-lg px-3 py-2 border border-green-400/30">
-                       <p className="text-green-100 text-[11px] leading-tight text-center italic break-words">{transcript}</p>
+                   <div className="w-[85%] max-w-sm px-2">
+                     <div className="bg-green-500/20 backdrop-blur-md rounded-md px-3 py-1.5 border border-green-400/30">
+                       <p className="text-green-100 text-[10px] leading-snug text-center italic break-words">{transcript}</p>
                      </div>
                    </div>
                  )}
 
                  {/* Session duration */}
                  {status !== "idle" && (
-                   <p className="text-xs sm:text-sm text-indigo-700 bg-white/90 backdrop-blur-sm px-3 py-1.5 sm:px-4 sm:py-2 rounded-full inline-block border border-indigo-200 shadow-md font-medium">
+                   <p className="text-[10px] text-indigo-700 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full inline-block border border-indigo-200 shadow-sm font-medium">
                      Session: {formatTime(sessionDuration)}
                    </p>
                  )}
+        </div>
 
-          {/* Call button - centered like phone interface with futuristic design */}
-          <div className="flex justify-center">
+          {/* Call button - centered at bottom, smaller on PC */}
+          <div className="absolute bottom-8 sm:bottom-12 left-0 right-0 flex flex-col items-center gap-2 z-50">
           {status === "idle" ? (
             <button
               onClick={startSession}
-              className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-cyan-500 via-blue-500 to-purple-600 hover:from-cyan-400 hover:via-blue-400 hover:to-purple-500 shadow-2xl hover:shadow-cyan-400/60 transition-all duration-300 flex items-center justify-center group overflow-hidden"
+              className="relative w-16 h-16 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-cyan-500 via-blue-500 to-purple-600 hover:from-cyan-400 hover:via-blue-400 hover:to-purple-500 shadow-2xl hover:shadow-cyan-400/60 transition-all duration-300 flex items-center justify-center group overflow-hidden"
               style={{
                 boxShadow: '0 0 40px rgba(6, 182, 212, 0.5), 0 0 60px rgba(59, 130, 246, 0.3), inset 0 -5px 15px rgba(0, 0, 0, 0.2)'
               }}
               aria-label="Start Conversation"
             >
               <div className="absolute inset-0 bg-gradient-to-t from-white/0 via-white/10 to-white/20 rounded-full"></div>
-              <Phone className="w-8 h-8 sm:w-10 sm:h-10 text-white group-hover:scale-125 transition-transform drop-shadow-[0_2px_8px_rgba(255,255,255,0.8)]" />
+              <Phone className="w-7 h-7 sm:w-6 sm:h-6 text-white group-hover:scale-125 transition-transform drop-shadow-[0_2px_8px_rgba(255,255,255,0.8)]" />
             </button>
           ) : (
             <button
               onClick={stopSession}
-              className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-red-500 via-pink-500 to-red-600 hover:from-red-400 hover:via-pink-400 hover:to-red-500 shadow-2xl hover:shadow-red-400/60 transition-all duration-300 flex items-center justify-center group overflow-hidden"
+              className="relative w-16 h-16 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-red-500 via-pink-500 to-red-600 hover:from-red-400 hover:via-pink-400 hover:to-red-500 shadow-2xl hover:shadow-red-400/60 transition-all duration-300 flex items-center justify-center group overflow-hidden"
               style={{
                 boxShadow: '0 0 40px rgba(239, 68, 68, 0.5), 0 0 60px rgba(236, 72, 153, 0.3), inset 0 -5px 15px rgba(0, 0, 0, 0.2)'
               }}
               aria-label="End call"
             >
               <div className="absolute inset-0 bg-gradient-to-t from-white/0 via-white/10 to-white/20 rounded-full"></div>
-              <PhoneOff className="w-8 h-8 sm:w-10 sm:h-10 text-white group-hover:scale-125 transition-transform drop-shadow-[0_2px_8px_rgba(255,255,255,0.8)]" />
+              <PhoneOff className="w-7 h-7 sm:w-6 sm:h-6 text-white group-hover:scale-125 transition-transform drop-shadow-[0_2px_8px_rgba(255,255,255,0.8)]" />
             </button>
           )}
-          </div>
 
                  {/* Audio toggle */}
                  <Button
                    variant="ghost"
                    size="sm"
                    onClick={toggleAudio}
-                   className="text-indigo-700 hover:text-indigo-900 hover:bg-white/50 backdrop-blur-sm border border-indigo-200 text-xs sm:text-sm px-3 py-1.5 sm:px-4 sm:py-2"
+                   className="text-indigo-700 hover:text-indigo-900 hover:bg-white/50 backdrop-blur-sm border border-indigo-200 text-[10px] px-2 py-1"
                  >
-            {isAudioEnabled ? <Volume2 className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" /> : <VolumeX className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />}
+            {isAudioEnabled ? <Volume2 className="w-3 h-3 mr-1" /> : <VolumeX className="w-3 h-3 mr-1" />}
             {isAudioEnabled ? "Audio On" : "Audio Off"}
           </Button>
         </div>
