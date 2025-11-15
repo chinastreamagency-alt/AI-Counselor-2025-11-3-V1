@@ -50,54 +50,57 @@ export default function VoiceTherapyTestPage() {
     return text.split(' ').filter(w => w.length > 0)
   }
 
-  // 逐字显示字幕（与语音同步）- 每个单词约250ms
+  // 逐字显示字幕（与语音同步）- 延迟500ms后开始，每个单词约250ms
   const displaySubtitlesSyncWithSpeech = useCallback((fullText: string) => {
     const words = splitIntoWords(fullText)
     let currentWordIndex = 0
     setDisplayedSubtitle([]) // 清空之前的字幕
 
-    const showNextWord = () => {
-      if (currentWordIndex >= words.length) {
-        // 所有单词都显示完了
-        if (subtitleTimerRef.current) {
-          clearInterval(subtitleTimerRef.current)
-        }
-        return
-      }
-
-      const word = words[currentWordIndex]
-
-      setDisplayedSubtitle(prev => {
-        // 将新单词添加到当前字幕
-        const currentText = prev.join(' ') + (prev.length > 0 ? ' ' : '') + word
-
-        // 按最大长度分割成行（每行约60个字符）
-        const maxCharsPerLine = 60
-        const lines: string[] = []
-        let currentLine = ''
-
-        currentText.split(' ').forEach(w => {
-          if ((currentLine + ' ' + w).length > maxCharsPerLine && currentLine.length > 0) {
-            lines.push(currentLine)
-            currentLine = w
-          } else {
-            currentLine = currentLine.length > 0 ? currentLine + ' ' + w : w
+    // 延迟500ms后开始显示字幕，确保语音先开始播放
+    setTimeout(() => {
+      const showNextWord = () => {
+        if (currentWordIndex >= words.length) {
+          // 所有单词都显示完了
+          if (subtitleTimerRef.current) {
+            clearInterval(subtitleTimerRef.current)
           }
+          return
+        }
+
+        const word = words[currentWordIndex]
+
+        setDisplayedSubtitle(prev => {
+          // 将新单词添加到当前字幕
+          const currentText = prev.join(' ') + (prev.length > 0 ? ' ' : '') + word
+
+          // 按最大长度分割成行（每行约50个字符，更窄）
+          const maxCharsPerLine = 50
+          const lines: string[] = []
+          let currentLine = ''
+
+          currentText.split(' ').forEach(w => {
+            if ((currentLine + ' ' + w).length > maxCharsPerLine && currentLine.length > 0) {
+              lines.push(currentLine)
+              currentLine = w
+            } else {
+              currentLine = currentLine.length > 0 ? currentLine + ' ' + w : w
+            }
+          })
+
+          if (currentLine) {
+            lines.push(currentLine)
+          }
+
+          // 只保留最后2行
+          return lines.slice(-2)
         })
 
-        if (currentLine) {
-          lines.push(currentLine)
-        }
+        currentWordIndex++
+      }
 
-        // 只保留最后2行
-        return lines.slice(-2)
-      })
-
-      currentWordIndex++
-    }
-
-    // 每250ms显示一个单词（模拟真实语音速度）
-    subtitleTimerRef.current = setInterval(showNextWord, 250)
+      // 每250ms显示一个单词（模拟真实语音速度）
+      subtitleTimerRef.current = setInterval(showNextWord, 250)
+    }, 500) // 延迟500ms后开始
   }, [])
 
   useEffect(() => {
@@ -596,7 +599,7 @@ export default function VoiceTherapyTestPage() {
                            </div>
                          </div>
                          <span className="text-blue-100 text-sm font-medium">
-                           Waiting for you to finish...
+                           Listening... Take your time
                          </span>
                        </div>
                      </div>
@@ -605,13 +608,13 @@ export default function VoiceTherapyTestPage() {
 
                  {/* AI 说话字幕 - 逐字显示，最多2行 */}
                  {displayedSubtitle.length > 0 && status === "speaking" && (
-                   <div className="w-full max-w-3xl px-4">
-                     <div className="bg-black/85 backdrop-blur-md rounded-xl px-4 sm:px-6 py-3 sm:py-4 shadow-2xl border border-white/10">
-                       <div className="space-y-1.5">
+                   <div className="w-full max-w-xl px-4">
+                     <div className="bg-black/85 backdrop-blur-md rounded-xl px-4 sm:px-5 py-2.5 sm:py-3 shadow-2xl border border-white/10">
+                       <div className="space-y-1">
                          {displayedSubtitle.map((line, index) => (
                            <p
                              key={index}
-                             className="text-white text-sm sm:text-base leading-relaxed text-center break-words"
+                             className="text-white text-xs sm:text-sm leading-relaxed text-center break-words"
                            >
                              {line}
                            </p>
@@ -623,9 +626,9 @@ export default function VoiceTherapyTestPage() {
 
                  {/* 用户说话字幕 */}
                  {transcript && status === "listening" && displayedSubtitle.length === 0 && waitingCountdown === 0 && (
-                   <div className="w-full max-w-3xl px-4">
-                     <div className="bg-green-500/20 backdrop-blur-md rounded-xl px-4 sm:px-6 py-2 sm:py-3 border border-green-400/30">
-                       <p className="text-green-100 text-sm sm:text-base text-center italic break-words">{transcript}</p>
+                   <div className="w-full max-w-xl px-4">
+                     <div className="bg-green-500/20 backdrop-blur-md rounded-xl px-4 sm:px-5 py-2 sm:py-2.5 border border-green-400/30">
+                       <p className="text-green-100 text-xs sm:text-sm text-center italic break-words">{transcript}</p>
                      </div>
                    </div>
                  )}
