@@ -37,7 +37,17 @@ export async function GET(request: NextRequest) {
   }
   
   try {
+    const redirectUri = `${process.env.NEXTAUTH_URL}/api/auth/custom-google/callback`
+
     console.log('开始交换 authorization code...')
+    console.log('Token exchange 参数:', {
+      hasCode: !!code,
+      codeLength: code?.length,
+      clientIdPrefix: process.env.GOOGLE_CLIENT_ID?.substring(0, 20),
+      redirectUri,
+      grantType: 'authorization_code'
+    })
+
     // 交换 code 获取 access token
     const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
@@ -48,15 +58,17 @@ export async function GET(request: NextRequest) {
         code,
         client_id: process.env.GOOGLE_CLIENT_ID!,
         client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-        redirect_uri: `${process.env.NEXTAUTH_URL}/api/auth/custom-google/callback`,
+        redirect_uri: redirectUri,
         grant_type: "authorization_code",
       }),
     })
-    
+
     if (!tokenResponse.ok) {
       const errorData = await tokenResponse.text()
       console.error("❌ Token exchange failed:", errorData)
       console.error("Token response status:", tokenResponse.status)
+      console.error("使用的 redirect_uri:", redirectUri)
+      console.error("请确认 Google Console 中的重定向 URI 包含:", redirectUri)
       return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/?error=token_exchange_failed&details=${encodeURIComponent(errorData)}`)
     }
     
