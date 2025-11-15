@@ -1,282 +1,490 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Mic, MicOff, Send, Volume2, Loader2 } from "lucide-react"
+import { Volume2, VolumeX, Phone, PhoneOff } from "lucide-react"
+import { VideoAvatar } from "@/components/video-avatar"
 
-interface Message {
+type Message = {
+  id: string
   role: "user" | "assistant"
   content: string
+  timestamp: Date
 }
 
-export default function TherapyTestChat() {
-  const [messages, setMessages] = useState<Message[]>([])
-  const [input, setInput] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [isSpeaking, setIsSpeaking] = useState(false)
-  const [isListening, setIsListening] = useState(false)
+type SessionStatus = "idle" | "listening" | "processing" | "speaking"
 
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
+export default function VoiceTherapyTestPage() {
+  const [status, setStatus] = useState<SessionStatus>("idle")
+  const [messages, setMessages] = useState<Message[]>([])
+  const [isAudioEnabled, setIsAudioEnabled] = useState(true)
+  const [transcript, setTranscript] = useState("")
+  const [sessionDuration, setSessionDuration] = useState(0)
+  const [currentSpeaker, setCurrentSpeaker] = useState<"user" | "assistant" | null>(null)
+  const [currentText, setCurrentText] = useState("")
+  const [elevenLabsError, setElevenLabsError] = useState<string | null>(null)
+
   const recognitionRef = useRef<any>(null)
+  const audioRef = useRef<HTMLAudioElement>(null)
+  const shouldListenRef = useRef(false)
+  const sessionTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const isAISpeakingRef = useRef(false)
   const testUserId = useRef(`test-${Date.now()}`)
 
-  // 自动滚动到底部
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
+    if (typeof window !== "undefined" && "webkitSpeechRecognition" in window) {
+      const SpeechRecognition = (window as any).webkitSpeechRecognition
+      recognitionRef.current = new SpeechRecognition()
+      recognitionRef.current.continuous = true
+      recognitionRef.current.interimResults = true
+      recognitionRef.current.lang = "en-US"
+      recognitionRef.current.maxAlternatives = 3
 
-  // 发送消息
-  const sendMessage = async (text: string) => {
-    if (!text.trim() || isLoading) return
+      recognitionRef.current.onresult = (event: any) => {
+        if (isAISpeakingRef.current) {
+          console.log("[Test] Ignoring speech during AI playback")
+          return
+        }
 
-    const userMessage: Message = { role: "user", content: text }
-    setMessages(prev => [...prev, userMessage])
-    setInput("")
-    setIsLoading(true)
+        let interimTranscript = ""
+        let finalTranscript = ""
 
-    try {
-      // 调用 Groq API
-      const response = await fetch("/api/groq-chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: [...messages, userMessage].map(m => ({
-            role: m.role,
-            content: m.content
-          })),
-          userId: testUserId.current
-        })
-      })
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript + " "
+          } else {
+            interimTranscript += transcript
+          }
+        }
 
-      if (!response.ok) {
-        throw new Error(`API 错误: ${response.status}`)
+        setTranscript(interimTranscript || finalTranscript)
+
+        if (finalTranscript.trim()) {
+          handleUserSpeech(finalTranscript.trim())
+        }
       }
 
-      const data = await response.json()
-      const aiMessage: Message = { role: "assistant", content: data.message }
-      setMessages(prev => [...prev, aiMessage])
-
-      // 自动播放语音
-      await playTTS(data.message)
-
-    } catch (error) {
-      console.error("发送失败:", error)
-      const errorMessage: Message = {
-        role: "assistant",
-        content: "抱歉，发生了错误。请检查 GROQ_API_KEY 是否已设置。"
+      recognitionRef.current.onerror = (event: any) => {
+        console.error("[Test] Speech recognition error:", event.error)
+        if (event.error !== "no-speech" && event.error !== "aborted") {
+          setTimeout(() => {
+            if (shouldListenRef.current && !isAISpeakingRef.current) {
+              try {
+                recognitionRef.current?.start()
+              } catch (e) {
+                console.error("[Test] Error restarting recognition:", e)
+              }
+            }
+          }, 1000)
+        }
       }
-      setMessages(prev => [...prev, errorMessage])
-    } finally {
-      setIsLoading(false)
+
+      recognitionRef.current.onend = () => {
+        if (shouldListenRef.current && !isAISpeakingRef.current) {
+          try {
+            recognitionRef.current?.start()
+          } catch (e) {
+            console.error("[Test] Error restarting recognition:", e)
+          }
+        }
+      }
     }
-  }
 
-  // 播放 TTS
-  const playTTS = async (text: string) => {
-    try {
-      setIsSpeaking(true)
-
-      const response = await fetch("/api/edge-tts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text })
-      })
-
-      if (!response.ok) throw new Error("TTS 失败")
-
-      const audioBlob = await response.blob()
-      const audioUrl = URL.createObjectURL(audioBlob)
-
-      audioRef.current = new Audio(audioUrl)
-      audioRef.current.play()
-
-      audioRef.current.onended = () => {
-        setIsSpeaking(false)
-        URL.revokeObjectURL(audioUrl)
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop()
       }
-    } catch (error) {
-      console.error("TTS 失败:", error)
-      setIsSpeaking(false)
     }
-  }
+  }, [])
 
-  // 语音输入
-  const startListening = () => {
-    if (!('webkitSpeechRecognition' in window)) {
-      alert("您的浏览器不支持语音识别，请使用 Chrome")
+  const startListening = useCallback(() => {
+    if (isAISpeakingRef.current) {
+      console.log("[Test] Not starting listening - AI is speaking")
       return
     }
 
-    const recognition = new (window as any).webkitSpeechRecognition()
-    recognition.lang = "zh-CN"
-    recognition.continuous = false
-    recognition.interimResults = false
+    console.log("[Test] Starting to listen for user speech...")
+    setStatus("listening")
+    shouldListenRef.current = true
+    setCurrentSpeaker(null)
+    setCurrentText("")
 
-    recognition.onstart = () => {
-      setIsListening(true)
-      // 如果 AI 正在说话，打断它
-      if (isSpeaking && audioRef.current) {
-        audioRef.current.pause()
-        setIsSpeaking(false)
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.start()
+      } catch (error) {
+        console.error("[Test] Error starting recognition:", error)
+      }
+    }
+  }, [])
+
+  const stopListening = useCallback(() => {
+    console.log("[Test] Stopping listening")
+    shouldListenRef.current = false
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop()
+      } catch (error) {
+        console.error("[Test] Error stopping recognition:", error)
+      }
+    }
+  }, [])
+
+  const speakText = useCallback(
+    async (text: string) => {
+      if (!text || typeof text !== "string") {
+        console.error("[Test] Invalid text for TTS:", text)
+        startListening()
+        return
+      }
+
+      stopListening()
+      isAISpeakingRef.current = true
+
+      setStatus("speaking")
+      setElevenLabsError(null)
+      setCurrentSpeaker("assistant")
+      setCurrentText(text)
+
+      try {
+        console.log("[Test] Requesting Edge TTS for text:", text.substring(0, 50) + "...")
+
+        const response = await fetch("/api/edge-tts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text }),
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          console.error("[Test] Edge TTS failed:", errorData)
+          setElevenLabsError("Voice service error")
+          isAISpeakingRef.current = false
+          startListening()
+          return
+        }
+
+        const audioBlob = await response.blob()
+        const audioUrl = URL.createObjectURL(audioBlob)
+
+        if (audioRef.current) {
+          audioRef.current.src = audioUrl
+          audioRef.current.onended = () => {
+            console.log("[Test] Audio playback ended")
+            isAISpeakingRef.current = false
+            setTimeout(() => startListening(), 500)
+          }
+          audioRef.current.onerror = () => {
+            console.error("[Test] Audio playback error")
+            isAISpeakingRef.current = false
+            startListening()
+          }
+          await audioRef.current.play()
+        }
+
+        console.log("[Test] Edge TTS playback started")
+      } catch (error) {
+        console.error("[Test] Error with Edge TTS:", error)
+        setElevenLabsError("Network error")
+        isAISpeakingRef.current = false
+        startListening()
+      }
+    },
+    [startListening, stopListening],
+  )
+
+  const handleUserSpeech = useCallback(
+    async (text: string) => {
+      if (!text.trim()) return
+
+      shouldListenRef.current = false
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop()
+        } catch (e) {
+          console.error("[Test] Error stopping recognition:", e)
+        }
+      }
+
+      setStatus("processing")
+      setCurrentSpeaker("user")
+      setCurrentText(text)
+
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        role: "user",
+        content: text,
+        timestamp: new Date(),
+      }
+
+      setMessages((prev) => [...prev, userMessage])
+
+      try {
+        console.log("[Test] Sending to AI:", text)
+
+        const response = await fetch("/api/groq-chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages: [...messages, userMessage].map(m => ({
+              role: m.role,
+              content: m.content
+            })),
+            userId: testUserId.current
+          }),
+        })
+
+        console.log("[Test] API Response status:", response.status)
+
+        if (!response.ok) {
+          const errorText = await response.text()
+          console.error("[Test] API Error response:", errorText)
+          throw new Error(`Failed to get AI response: ${response.status}`)
+        }
+
+        const data = await response.json()
+        console.log("[Test] AI Response received:", data)
+
+        if (!data.message) {
+          console.error("[Test] No message in response:", data)
+          throw new Error("Invalid response format")
+        }
+
+        const aiMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content: data.message,
+          timestamp: new Date(),
+        }
+
+        setMessages((prev) => [...prev, aiMessage])
+        console.log("[Test] Message added, will speak:", data.message)
+
+        if (isAudioEnabled) {
+          await speakText(data.message)
+        } else {
+          startListening()
+        }
+      } catch (error) {
+        console.error("[Test] Error processing speech:", error)
+        console.error("[Test] Error details:", error instanceof Error ? error.message : String(error))
+        setStatus("idle")
+        startListening()
+      }
+    },
+    [messages, isAudioEnabled, speakText, startListening],
+  )
+
+  const startSession = useCallback(() => {
+    setMessages([])
+    setSessionDuration(0)
+
+    sessionTimerRef.current = setInterval(() => {
+      setSessionDuration((prev) => prev + 1)
+    }, 1000)
+
+    const greeting = "Hello, I'm Aria, your AI counselor. How are you feeling today?"
+    const greetingMessage: Message = {
+      id: Date.now().toString(),
+      role: "assistant",
+      content: greeting,
+      timestamp: new Date(),
+    }
+    setMessages([greetingMessage])
+
+    if (isAudioEnabled) {
+      speakText(greeting)
+    } else {
+      startListening()
+    }
+  }, [isAudioEnabled, speakText, startListening])
+
+  const stopSession = useCallback(() => {
+    shouldListenRef.current = false
+    isAISpeakingRef.current = false
+
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop()
+      } catch (e) {
+        console.error("[Test] Error stopping recognition:", e)
       }
     }
 
-    recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript
-      setInput(transcript)
-      sendMessage(transcript)
+    if (audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current.currentTime = 0
     }
 
-    recognition.onerror = () => {
-      setIsListening(false)
+    if (sessionTimerRef.current) {
+      clearInterval(sessionTimerRef.current)
     }
 
-    recognition.onend = () => {
-      setIsListening(false)
-    }
+    setStatus("idle")
+    setCurrentSpeaker(null)
+    setCurrentText("")
+  }, [])
 
-    recognitionRef.current = recognition
-    recognition.start()
-  }
-
-  const stopListening = () => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop()
-      setIsListening(false)
+  const toggleAudio = useCallback(() => {
+    setIsAudioEnabled((prev) => !prev)
+    if (audioRef.current && !isAudioEnabled) {
+      audioRef.current.pause()
     }
+  }, [isAudioEnabled])
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, "0")}`
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
-      {/* 顶部标题 */}
-      <div className="bg-white/80 backdrop-blur-sm border-b sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-800">🧠 AI 心理咨询师 - Aria</h1>
-              <p className="text-sm text-gray-600">测试版 | 无需登录 | 直接对话</p>
-            </div>
-            <div className="text-right text-xs text-gray-500">
-              <div>Groq API (Llama 3.3 70B)</div>
-              <div>Edge TTS (免费)</div>
-            </div>
+    <div className="relative h-screen overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-100 to-purple-50 flex flex-col">
+      {/* Top Brand Bar */}
+      <div className="absolute top-0 left-0 right-0 z-50 px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-between bg-gradient-to-b from-white/80 via-white/60 to-transparent backdrop-blur-sm">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-cyan-500 to-purple-600 flex items-center justify-center shadow-lg">
+            <Phone className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           </div>
+          <div>
+            <h1 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-cyan-600 to-purple-600 bg-clip-text text-transparent">
+              AI-Counselor
+            </h1>
+            <p className="text-xs text-slate-600">测试版 - 无限制</p>
+          </div>
+        </div>
+
+        <div className="text-xs text-slate-600 bg-white/90 px-3 py-1 rounded-full">
+          无需登录 | 无时长限制
         </div>
       </div>
 
-      {/* 对话区域 */}
-      <div className="max-w-4xl mx-auto px-4 py-6">
-        <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
-          {/* 消息列表 */}
-          <div className="h-[calc(100vh-280px)] overflow-y-auto p-6 space-y-4">
-            {messages.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="text-6xl mb-4">👋</div>
-                <h2 className="text-2xl font-semibold text-gray-700 mb-2">你好，我是 Aria</h2>
-                <p className="text-gray-600 mb-6">你的 AI 心理咨询师。有什么我可以帮助你的吗？</p>
-                <div className="flex flex-wrap gap-2 justify-center max-w-2xl mx-auto">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => sendMessage("我最近感到很焦虑")}
-                  >
-                    我最近感到很焦虑
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => sendMessage("我睡不好觉")}
-                  >
-                    我睡不好觉
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => sendMessage("我觉得自己很失败")}
-                  >
-                    我觉得自己很失败
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <>
-                {messages.map((msg, idx) => (
-                  <div
-                    key={idx}
-                    className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                  >
-                    <div
-                      className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                        msg.role === "user"
-                          ? "bg-blue-600 text-white"
-                          : "bg-gray-100 text-gray-800"
-                      }`}
-                    >
-                      <div className="text-sm whitespace-pre-wrap">{msg.content}</div>
-                    </div>
-                  </div>
-                ))}
-                {isLoading && (
-                  <div className="flex justify-start">
-                    <div className="bg-gray-100 rounded-2xl px-4 py-3">
-                      <Loader2 className="h-5 w-5 animate-spin text-gray-600" />
-                    </div>
-                  </div>
-                )}
-                <div ref={messagesEndRef} />
-              </>
-            )}
+      {/* Main Content Area */}
+      <div className="flex-1 flex items-center justify-center p-0 sm:p-2 pt-16 sm:pt-20 pb-32 sm:pb-32">
+        <div className="relative w-full h-full sm:h-[85vh] sm:max-w-6xl">
+          <VideoAvatar
+            isListening={status === "listening"}
+            isSpeaking={status === "speaking"}
+            currentSpeaker={currentSpeaker}
+            currentText={currentText}
+          />
+
+               {/* Control panel overlay - positioned at bottom center of video */}
+               <div className="absolute bottom-44 sm:bottom-16 left-0 right-0 flex flex-col items-center gap-3 sm:gap-4 px-4 z-50">
+                 {/* Status indicator */}
+                 <div className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-white/90 backdrop-blur-md rounded-full border border-indigo-200 shadow-lg shadow-indigo-200/50">
+            <div
+              className={`w-2 h-2 rounded-full ${
+                status === "listening"
+                  ? "bg-green-400 animate-pulse"
+                  : status === "processing"
+                    ? "bg-yellow-400 animate-pulse"
+                    : status === "speaking"
+                      ? "bg-blue-400 animate-pulse"
+                      : "bg-gray-400"
+              }`}
+            />
+                   <span className="text-xs sm:text-sm font-medium text-slate-700">
+              {status === "idle"
+                ? "Ready"
+                : status === "listening"
+                  ? "Listening..."
+                  : status === "processing"
+                    ? "Thinking..."
+                    : status === "speaking"
+                      ? "Speaking..."
+                      : "Ready"}
+            </span>
           </div>
 
-          {/* 输入区域 */}
-          <div className="border-t bg-white/90 p-4">
-            {isSpeaking && (
-              <div className="mb-3 flex items-center gap-2 text-blue-600 text-sm">
-                <Volume2 className="h-4 w-4 animate-pulse" />
-                <span>Aria 正在说话...</span>
-              </div>
-            )}
-            {isListening && (
-              <div className="mb-3 flex items-center gap-2 text-green-600 text-sm">
-                <Mic className="h-4 w-4 animate-pulse" />
-                <span>正在倾听...</span>
-              </div>
-            )}
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && !e.shiftKey && sendMessage(input)}
-                placeholder="输入消息... (按 Enter 发送)"
-                className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                disabled={isLoading || isListening}
-              />
-              <Button
-                onClick={isListening ? stopListening : startListening}
-                variant={isListening ? "destructive" : "outline"}
-                size="icon"
-                className="rounded-xl w-12 h-12"
-              >
-                {isListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-              </Button>
-              <Button
-                onClick={() => sendMessage(input)}
-                disabled={!input.trim() || isLoading || isListening}
-                size="icon"
-                className="rounded-xl w-12 h-12 bg-blue-600 hover:bg-blue-700"
-              >
-                <Send className="h-5 w-5" />
-              </Button>
-            </div>
-            <div className="mt-2 text-xs text-gray-500 text-center">
-              💡 提示：点击麦克风图标可以语音输入
-            </div>
+                 {/* Subtitle/Transcript Display */}
+                 {currentText && (
+                   <div className="w-full max-w-md px-4">
+                     <div className="bg-black/70 backdrop-blur-md rounded-xl px-4 py-3 shadow-2xl border border-white/10">
+                       <p className="text-white text-sm leading-relaxed text-center">{currentText}</p>
+                     </div>
+                   </div>
+                 )}
+
+                 {transcript && status === "listening" && !currentText && (
+                   <div className="w-full max-w-md px-4">
+                     <div className="bg-green-500/20 backdrop-blur-md rounded-xl px-4 py-2 border border-green-400/30">
+                       <p className="text-green-100 text-xs text-center italic">{transcript}</p>
+                     </div>
+                   </div>
+                 )}
+
+                 {/* Session duration */}
+                 {status !== "idle" && (
+                   <p className="text-xs sm:text-sm text-indigo-700 bg-white/90 backdrop-blur-sm px-3 py-1.5 sm:px-4 sm:py-2 rounded-full inline-block border border-indigo-200 shadow-md font-medium">
+                     Session: {formatTime(sessionDuration)}
+                   </p>
+                 )}
+
+          {/* Call button - centered like phone interface with futuristic design */}
+          <div className="flex justify-center">
+          {status === "idle" ? (
+            <button
+              onClick={startSession}
+              className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-cyan-500 via-blue-500 to-purple-600 hover:from-cyan-400 hover:via-blue-400 hover:to-purple-500 shadow-2xl hover:shadow-cyan-400/60 transition-all duration-300 flex items-center justify-center group overflow-hidden"
+              style={{
+                boxShadow: '0 0 40px rgba(6, 182, 212, 0.5), 0 0 60px rgba(59, 130, 246, 0.3), inset 0 -5px 15px rgba(0, 0, 0, 0.2)'
+              }}
+              aria-label="Start Conversation"
+            >
+              <div className="absolute inset-0 bg-gradient-to-t from-white/0 via-white/10 to-white/20 rounded-full"></div>
+              <Phone className="w-8 h-8 sm:w-10 sm:h-10 text-white group-hover:scale-125 transition-transform drop-shadow-[0_2px_8px_rgba(255,255,255,0.8)]" />
+            </button>
+          ) : (
+            <button
+              onClick={stopSession}
+              className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-red-500 via-pink-500 to-red-600 hover:from-red-400 hover:via-pink-400 hover:to-red-500 shadow-2xl hover:shadow-red-400/60 transition-all duration-300 flex items-center justify-center group overflow-hidden"
+              style={{
+                boxShadow: '0 0 40px rgba(239, 68, 68, 0.5), 0 0 60px rgba(236, 72, 153, 0.3), inset 0 -5px 15px rgba(0, 0, 0, 0.2)'
+              }}
+              aria-label="End call"
+            >
+              <div className="absolute inset-0 bg-gradient-to-t from-white/0 via-white/10 to-white/20 rounded-full"></div>
+              <PhoneOff className="w-8 h-8 sm:w-10 sm:h-10 text-white group-hover:scale-125 transition-transform drop-shadow-[0_2px_8px_rgba(255,255,255,0.8)]" />
+            </button>
+          )}
           </div>
+
+                 {/* Audio toggle */}
+                 <Button
+                   variant="ghost"
+                   size="sm"
+                   onClick={toggleAudio}
+                   className="text-indigo-700 hover:text-indigo-900 hover:bg-white/50 backdrop-blur-sm border border-indigo-200 text-xs sm:text-sm px-3 py-1.5 sm:px-4 sm:py-2"
+                 >
+            {isAudioEnabled ? <Volume2 className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" /> : <VolumeX className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />}
+            {isAudioEnabled ? "Audio On" : "Audio Off"}
+          </Button>
+        </div>
+
+               {/* Error messages */}
+               {elevenLabsError && (
+                 <div className="absolute top-20 left-4 right-4 p-3 sm:p-4 bg-red-50 backdrop-blur-sm border border-red-200 rounded-lg shadow-lg">
+                   <p className="text-xs sm:text-sm text-red-700 text-center font-medium">{elevenLabsError}</p>
+                 </div>
+               )}
         </div>
       </div>
+
+      {/* Bottom Brand Footer */}
+      <div className="absolute bottom-0 left-0 right-0 z-50 px-4 py-3 sm:py-4 bg-gradient-to-t from-white/80 via-white/60 to-transparent backdrop-blur-sm">
+        <div className="text-center">
+          <p className="text-xs sm:text-sm text-slate-600 font-medium">
+            测试版本 - Powered by Groq API + Edge TTS
+          </p>
+          <p className="text-xs text-slate-500 mt-1">
+            /test-therapy-20251115
+          </p>
+        </div>
+      </div>
+
+      <audio ref={audioRef} className="hidden" />
     </div>
   )
 }
