@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getAudioStream } from "edge-tts"
 
+/**
+ * Microsoft Edge TTS API - 完全免费的 TTS 方案
+ * 使用直接 HTTP 调用，避免 edge-tts 包的编译问题
+ */
 export async function POST(request: NextRequest) {
   try {
     const { text } = await request.json()
@@ -21,29 +24,43 @@ export async function POST(request: NextRequest) {
 
     console.log("[Edge TTS] Using voice:", voice)
 
-    // 调用 Edge TTS
-    const audioStream = getAudioStream(text, {
-      voice,
-      rate: "-5%",    // 稍慢，更容易理解
-      pitch: "+0Hz",  // 自然音调
-    })
+    // 生成 SSML（Speech Synthesis Markup Language）
+    const ssml = `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='${isChinese ? 'zh-CN' : 'en-US'}'>
+      <voice name='${voice}'>
+        <prosody rate='-5%' pitch='+0Hz'>
+          ${escapeXml(text)}
+        </prosody>
+      </voice>
+    </speak>`
 
-    // 收集音频数据
-    const chunks: Buffer[] = []
-    for await (const chunk of audioStream) {
-      if (chunk.type === "audio") {
-        chunks.push(chunk.data)
+    // 调用 Microsoft Edge TTS API
+    const response = await fetch(
+      `https://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491D6F4&Sec-MS-GEC=0B5859F01DEA5D33B9B90D2EA54E7B02&Sec-MS-GEC-Version=1-${Date.now()}.${Math.floor(Math.random() * 1000000000)}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/ssml+xml",
+          "X-Microsoft-OutputFormat": "audio-24khz-48kbitrate-mono-mp3",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36 Edg/91.0.864.59",
+        },
+        body: ssml,
       }
+    )
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error("[Edge TTS] API error:", response.status, errorText)
+      throw new Error(`Edge TTS API error: ${response.status} ${errorText}`)
     }
 
-    const audioBuffer = Buffer.concat(chunks)
+    const audioBuffer = await response.arrayBuffer()
 
-    console.log("[Edge TTS] Generated audio:", audioBuffer.length, "bytes")
+    console.log("[Edge TTS] Generated audio:", audioBuffer.byteLength, "bytes")
 
     return new NextResponse(audioBuffer, {
       headers: {
         "Content-Type": "audio/mpeg",
-        "Content-Length": audioBuffer.length.toString(),
+        "Content-Length": audioBuffer.byteLength.toString(),
       },
     })
   } catch (error) {
@@ -53,4 +70,16 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+/**
+ * 转义 XML 特殊字符
+ */
+function escapeXml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;")
 }
