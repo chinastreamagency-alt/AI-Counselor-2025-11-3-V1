@@ -148,17 +148,16 @@ export default function VoiceTherapyTestPage() {
       setCurrentText(text)
 
       try {
-        console.log("[Test] Requesting Edge TTS for text:", text.substring(0, 50) + "...")
+        console.log("[Test] Requesting OpenAI TTS for text:", text.substring(0, 50) + "...")
 
-        const response = await fetch("/api/edge-tts", {
+        const response = await fetch("/api/openai-tts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text }),
         })
 
         if (!response.ok) {
-          console.error("[Test] Edge TTS failed, falling back to browser TTS")
-          // 备用方案：使用浏览器内置 TTS
+          console.error("[Test] OpenAI TTS failed, falling back to browser TTS")
           useBrowserTTS(text)
           return
         }
@@ -180,9 +179,9 @@ export default function VoiceTherapyTestPage() {
           await audioRef.current.play()
         }
 
-        console.log("[Test] Edge TTS playback started")
+        console.log("[Test] OpenAI TTS playback started")
       } catch (error) {
-        console.error("[Test] Error with Edge TTS, falling back to browser TTS:", error)
+        console.error("[Test] Error with OpenAI TTS, falling back to browser TTS:", error)
         useBrowserTTS(text)
       }
     },
@@ -502,10 +501,10 @@ export default function VoiceTherapyTestPage() {
       <div className="absolute bottom-0 left-0 right-0 z-50 px-4 py-3 sm:py-4 bg-gradient-to-t from-white/80 via-white/60 to-transparent backdrop-blur-sm">
         <div className="text-center">
           <p className="text-xs sm:text-sm text-slate-600 font-medium">
-            测试版本 - Powered by Groq API + Edge TTS
+            测试版本 - Powered by Groq API + OpenAI TTS (HD)
           </p>
           <p className="text-xs text-slate-500 mt-1">
-            /test-therapy-20251115
+            /test-therapy-20251115 | 真人级别语音
           </p>
         </div>
       </div>
