@@ -1,39 +1,53 @@
 import { NextRequest, NextResponse } from "next/server"
 import { cookies } from "next/headers"
 
+// 用于追踪已处理的授权码，防止重复处理
+const processedCodes = new Set<string>()
+
 export async function GET(request: NextRequest) {
   console.log('=== Google OAuth Callback 开始 ===')
   const searchParams = request.nextUrl.searchParams
   const code = searchParams.get("code")
   const state = searchParams.get("state")
   const error = searchParams.get("error")
-  
-  console.log('回调参数:', { 
-    hasCode: !!code, 
-    state, 
+
+  console.log('回调参数:', {
+    hasCode: !!code,
+    state,
     error,
-    fullUrl: request.url 
+    fullUrl: request.url
   })
-  
+
   // 检查错误
   if (error) {
     console.error('Google 返回错误:', error)
     return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/?error=google_auth_failed`)
   }
-  
+
+  if (!code) {
+    return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/?error=no_code`)
+  }
+
+  // 防止重复处理同一个授权码
+  if (processedCodes.has(code)) {
+    console.warn('⚠️ 授权码已被处理过，忽略重复请求')
+    return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/?error=code_already_used`)
+  }
+
+  // 标记此授权码为已处理
+  processedCodes.add(code)
+  // 10分钟后自动清理（授权码本身的有效期）
+  setTimeout(() => processedCodes.delete(code), 10 * 60 * 1000)
+
   // 验证 state
   const cookieStore = await cookies()
   const savedState = cookieStore.get('oauth_state')?.value
-  
+
   // 在生产环境中，由于 cookie 可能因为域名/HTTPS 问题不可靠，我们放宽验证
   // 只要有 code 就继续（Google 已经验证过了）
   if (state && savedState && state !== savedState) {
     console.warn('State mismatch (continuing anyway):', { state, savedState })
     // 不再阻止，只是记录警告
-  }
-  
-  if (!code) {
-    return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/?error=no_code`)
   }
   
   try {
@@ -69,6 +83,10 @@ export async function GET(request: NextRequest) {
       console.error("Token response status:", tokenResponse.status)
       console.error("使用的 redirect_uri:", redirectUri)
       console.error("请确认 Google Console 中的重定向 URI 包含:", redirectUri)
+
+      // 清理已处理的授权码标记，允许重试
+      processedCodes.delete(code)
+
       return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/?error=token_exchange_failed&details=${encodeURIComponent(errorData)}`)
     }
     
