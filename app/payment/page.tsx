@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -41,7 +41,7 @@ const pricingPackages = [
   },
 ]
 
-export default function PaymentPage() {
+function PaymentContent() {
   const router = useRouter()
   const [userEmail, setUserEmail] = useState<string | null>(null)
   const searchParams = useSearchParams()
@@ -248,5 +248,20 @@ export default function PaymentPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function PaymentPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-100 to-purple-50 flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+          <p className="mt-4 text-gray-600">Loading payment options...</p>
+        </div>
+      </div>
+    }>
+      <PaymentContent />
+    </Suspense>
   )
 }

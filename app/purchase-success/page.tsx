@@ -1,13 +1,13 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { CheckCircle, Loader2, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { loadUserProfile, saveUserProfile } from "@/lib/user-profile"
 
-export default function PurchaseSuccessPage() {
+function PurchaseSuccessContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const sessionId = searchParams.get("session_id")
@@ -167,5 +167,22 @@ export default function PurchaseSuccessPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function PurchaseSuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md bg-white/10 backdrop-blur-md border-white/20">
+          <CardContent className="flex flex-col items-center justify-center p-8">
+            <Loader2 className="w-12 h-12 animate-spin text-white mb-4" />
+            <p className="text-white text-lg">Loading...</p>
+          </CardContent>
+        </Card>
+      </div>
+    }>
+      <PurchaseSuccessContent />
+    </Suspense>
   )
 }
