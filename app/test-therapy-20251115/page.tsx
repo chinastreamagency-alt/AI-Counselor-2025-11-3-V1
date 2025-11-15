@@ -157,11 +157,9 @@ export default function VoiceTherapyTestPage() {
         })
 
         if (!response.ok) {
-          const errorData = await response.json()
-          console.error("[Test] Edge TTS failed:", errorData)
-          setElevenLabsError("Voice service error")
-          isAISpeakingRef.current = false
-          startListening()
+          console.error("[Test] Edge TTS failed, falling back to browser TTS")
+          // 备用方案：使用浏览器内置 TTS
+          useBrowserTTS(text)
           return
         }
 
@@ -176,23 +174,51 @@ export default function VoiceTherapyTestPage() {
             setTimeout(() => startListening(), 500)
           }
           audioRef.current.onerror = () => {
-            console.error("[Test] Audio playback error")
-            isAISpeakingRef.current = false
-            startListening()
+            console.error("[Test] Audio playback error, falling back to browser TTS")
+            useBrowserTTS(text)
           }
           await audioRef.current.play()
         }
 
         console.log("[Test] Edge TTS playback started")
       } catch (error) {
-        console.error("[Test] Error with Edge TTS:", error)
-        setElevenLabsError("Network error")
-        isAISpeakingRef.current = false
-        startListening()
+        console.error("[Test] Error with Edge TTS, falling back to browser TTS:", error)
+        useBrowserTTS(text)
       }
     },
     [startListening, stopListening],
   )
+
+  // 浏览器内置 TTS 备用方案
+  const useBrowserTTS = (text: string) => {
+    console.log("[Test] Using browser TTS")
+    setElevenLabsError("Using browser voice (Edge TTS unavailable)")
+
+    if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(text)
+      utterance.rate = 0.9
+      utterance.pitch = 1.0
+      utterance.volume = 1.0
+
+      utterance.onend = () => {
+        console.log("[Test] Browser TTS ended")
+        isAISpeakingRef.current = false
+        setTimeout(() => startListening(), 500)
+      }
+
+      utterance.onerror = () => {
+        console.error("[Test] Browser TTS error")
+        isAISpeakingRef.current = false
+        startListening()
+      }
+
+      window.speechSynthesis.speak(utterance)
+    } else {
+      console.error("[Test] Browser TTS not supported")
+      isAISpeakingRef.current = false
+      startListening()
+    }
+  }
 
   const handleUserSpeech = useCallback(
     async (text: string) => {
