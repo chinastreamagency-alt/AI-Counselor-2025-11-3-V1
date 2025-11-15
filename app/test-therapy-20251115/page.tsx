@@ -14,6 +14,13 @@ type Message = {
 
 type SessionStatus = "idle" | "listening" | "processing" | "speaking"
 
+// 字幕显示的句子队列
+type SubtitleSentence = {
+  text: string
+  startTime: number
+  duration: number
+}
+
 export default function VoiceTherapyTestPage() {
   const [status, setStatus] = useState<SessionStatus>("idle")
   const [messages, setMessages] = useState<Message[]>([])
@@ -22,6 +29,7 @@ export default function VoiceTherapyTestPage() {
   const [sessionDuration, setSessionDuration] = useState(0)
   const [currentSpeaker, setCurrentSpeaker] = useState<"user" | "assistant" | null>(null)
   const [currentText, setCurrentText] = useState("")
+  const [displayedSubtitle, setDisplayedSubtitle] = useState<string[]>([]) // 改为数组，最多显示2行
   const [elevenLabsError, setElevenLabsError] = useState<string | null>(null)
 
   const recognitionRef = useRef<any>(null)
@@ -30,8 +38,52 @@ export default function VoiceTherapyTestPage() {
   const sessionTimerRef = useRef<NodeJS.Timeout | null>(null)
   const isAISpeakingRef = useRef(false)
   const testUserId = useRef(`test-${Date.now()}`)
-  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null) // 用于检测用户说话停顿
-  const lastTranscriptRef = useRef("") // 记录最后一次识别的文本
+  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const lastTranscriptRef = useRef("")
+  const subtitleTimerRef = useRef<NodeJS.Timeout | null>(null) // 字幕滚动计时器
+  const currentSentenceIndexRef = useRef(0) // 当前显示到第几句
+
+  // 将文本分割成句子（按句号、问号、感叹号分割）
+  const splitIntoSentences = (text: string): string[] => {
+    const sentences = text.match(/[^.!?]+[.!?]+/g) || [text]
+    return sentences.map(s => s.trim()).filter(s => s.length > 0)
+  }
+
+  // 逐句显示字幕（每句显示约3-5秒，根据长度调整）
+  const displaySubtitlesSequentially = useCallback((fullText: string) => {
+    const sentences = splitIntoSentences(fullText)
+    currentSentenceIndexRef.current = 0
+    setDisplayedSubtitle([]) // 清空之前的字幕
+
+    const showNextSentence = () => {
+      const index = currentSentenceIndexRef.current
+      if (index >= sentences.length) {
+        // 所有句子都显示完了
+        if (subtitleTimerRef.current) {
+          clearTimeout(subtitleTimerRef.current)
+        }
+        return
+      }
+
+      const sentence = sentences[index]
+
+      // 更新字幕显示（最多2行）
+      setDisplayedSubtitle(prev => {
+        const newSubtitles = [...prev, sentence]
+        // 只保留最后2行
+        return newSubtitles.slice(-2)
+      })
+
+      currentSentenceIndexRef.current++
+
+      // 根据句子长度计算显示时间（每个字符约80ms，最少2秒，最多6秒）
+      const displayDuration = Math.min(Math.max(sentence.length * 80, 2000), 6000)
+
+      subtitleTimerRef.current = setTimeout(showNextSentence, displayDuration)
+    }
+
+    showNextSentence()
+  }, [])
 
   useEffect(() => {
     if (typeof window !== "undefined" && "webkitSpeechRecognition" in window) {
@@ -39,7 +91,7 @@ export default function VoiceTherapyTestPage() {
       recognitionRef.current = new SpeechRecognition()
       recognitionRef.current.continuous = true
       recognitionRef.current.interimResults = true
-      recognitionRef.current.lang = "en-US"
+      recognitionRef.current.lang = "en-US" // 英文识别
       recognitionRef.current.maxAlternatives = 3
 
       recognitionRef.current.onresult = (event: any) => {
@@ -166,6 +218,9 @@ export default function VoiceTherapyTestPage() {
       setCurrentSpeaker("assistant")
       setCurrentText(text)
 
+      // 启动逐句字幕显示
+      displaySubtitlesSequentially(text)
+
       try {
         console.log("[Test] Requesting ElevenLabs TTS for text:", text.substring(0, 50) + "...")
 
@@ -189,6 +244,7 @@ export default function VoiceTherapyTestPage() {
           audioRef.current.onended = () => {
             console.log("[Test] Audio playback ended")
             isAISpeakingRef.current = false
+            setDisplayedSubtitle([]) // 清空字幕
             setTimeout(() => startListening(), 500)
           }
           audioRef.current.onerror = () => {
@@ -204,7 +260,7 @@ export default function VoiceTherapyTestPage() {
         useBrowserTTS(text)
       }
     },
-    [startListening, stopListening],
+    [startListening, stopListening, displaySubtitlesSequentially],
   )
 
   // 浏览器内置 TTS 备用方案
@@ -221,12 +277,14 @@ export default function VoiceTherapyTestPage() {
       utterance.onend = () => {
         console.log("[Test] Browser TTS ended")
         isAISpeakingRef.current = false
+        setDisplayedSubtitle([]) // 清空字幕
         setTimeout(() => startListening(), 500)
       }
 
       utterance.onerror = () => {
         console.error("[Test] Browser TTS error")
         isAISpeakingRef.current = false
+        setDisplayedSubtitle([]) // 清空字幕
         startListening()
       }
 
@@ -234,6 +292,7 @@ export default function VoiceTherapyTestPage() {
     } else {
       console.error("[Test] Browser TTS not supported")
       isAISpeakingRef.current = false
+      setDisplayedSubtitle([]) // 清空字幕
       startListening()
     }
   }
@@ -361,6 +420,11 @@ export default function VoiceTherapyTestPage() {
       sessionTimerRef.current = null
     }
 
+    if (subtitleTimerRef.current) {
+      clearTimeout(subtitleTimerRef.current)
+      subtitleTimerRef.current = null
+    }
+
     // 停止语音识别
     if (recognitionRef.current) {
       try {
@@ -389,7 +453,9 @@ export default function VoiceTherapyTestPage() {
     setMessages([]) // 清空对话历史
     setSessionDuration(0)
     setElevenLabsError(null)
+    setDisplayedSubtitle([]) // 清空字幕
     lastTranscriptRef.current = ""
+    currentSentenceIndexRef.current = 0
 
     console.log("[Test] Session stopped, all state reset")
   }, [])
@@ -466,19 +532,45 @@ export default function VoiceTherapyTestPage() {
             </span>
           </div>
 
-                 {/* Subtitle/Transcript Display */}
-                 {currentText && (
+                 {/* AI 思考中的加载动画 */}
+                 {status === "processing" && (
                    <div className="w-full max-w-md px-4">
-                     <div className="bg-black/70 backdrop-blur-md rounded-xl px-4 py-3 shadow-2xl border border-white/10">
-                       <p className="text-white text-sm leading-relaxed text-center">{currentText}</p>
+                     <div className="bg-gradient-to-r from-purple-500/20 to-cyan-500/20 backdrop-blur-md rounded-xl px-6 py-4 border border-purple-400/30 shadow-lg">
+                       <div className="flex items-center justify-center gap-2">
+                         <div className="flex gap-1">
+                           <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
+                           <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
+                           <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
+                         </div>
+                         <span className="text-purple-100 text-sm font-medium ml-2">AI is thinking...</span>
+                       </div>
                      </div>
                    </div>
                  )}
 
-                 {transcript && status === "listening" && !currentText && (
-                   <div className="w-full max-w-md px-4">
-                     <div className="bg-green-500/20 backdrop-blur-md rounded-xl px-4 py-2 border border-green-400/30">
-                       <p className="text-green-100 text-xs text-center italic">{transcript}</p>
+                 {/* AI 说话字幕 - 逐句显示，最多2行 */}
+                 {displayedSubtitle.length > 0 && status === "speaking" && (
+                   <div className="w-full max-w-2xl px-4">
+                     <div className="bg-black/80 backdrop-blur-md rounded-xl px-4 sm:px-6 py-3 sm:py-4 shadow-2xl border border-white/10">
+                       <div className="space-y-1">
+                         {displayedSubtitle.map((sentence, index) => (
+                           <p
+                             key={index}
+                             className="text-white text-xs sm:text-sm leading-relaxed text-center break-words animate-fade-in"
+                           >
+                             {sentence}
+                           </p>
+                         ))}
+                       </div>
+                     </div>
+                   </div>
+                 )}
+
+                 {/* 用户说话字幕 */}
+                 {transcript && status === "listening" && displayedSubtitle.length === 0 && (
+                   <div className="w-full max-w-2xl px-4">
+                     <div className="bg-green-500/20 backdrop-blur-md rounded-xl px-4 sm:px-6 py-2 sm:py-3 border border-green-400/30">
+                       <p className="text-green-100 text-xs sm:text-sm text-center italic break-words">{transcript}</p>
                      </div>
                    </div>
                  )}
