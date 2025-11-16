@@ -145,17 +145,32 @@ export default function VoiceTherapyTestPage() {
       if (recognizedText && recognizedText.length > 0) {
         console.log("[Whisper] Recognized:", recognizedText)
 
-        // 累积识别文本
-        lastTranscriptRef.current += recognizedText + " "
-        setTranscript(lastTranscriptRef.current)
-        setIsUserSpeaking(true)
-        lastSpeechTimeRef.current = Date.now()
+        // 累积识别文本（每次识别都是新的2秒片段，直接累积）
+        const newText = recognizedText.trim()
+        if (newText.length > 0) {
+          // 直接追加新的识别结果（Whisper每2秒识别一次，累积所有片段）
+          const currentText = lastTranscriptRef.current.trim()
+          if (currentText) {
+            // 如果已有文本，添加空格后追加新文本
+            lastTranscriptRef.current = currentText + " " + newText
+          } else {
+            // 如果是第一次，直接设置
+            lastTranscriptRef.current = newText
+          }
+          
+          setTranscript(lastTranscriptRef.current)
+          setIsUserSpeaking(true)
+          lastSpeechTimeRef.current = Date.now()
 
-        // 重置倒计时
-        if (countdownTimerRef.current) {
-          clearInterval(countdownTimerRef.current)
+          // 重置倒计时（有新的语音输入）
+          if (countdownTimerRef.current) {
+            clearInterval(countdownTimerRef.current)
+            countdownTimerRef.current = null
+          }
+          setWaitingCountdown(0)
+          
+          console.log("[Whisper] Accumulated transcript:", lastTranscriptRef.current)
         }
-        setWaitingCountdown(0)
       }
     } catch (error) {
       console.error("[Whisper] Error:", error)
@@ -683,7 +698,7 @@ export default function VoiceTherapyTestPage() {
 
                  {/* AI 说话字幕 - 逐字显示，最多5行，宽度不超过视频容器 */}
                  {displayedSubtitle.length > 0 && status === "speaking" && (
-                   <div className="w-[85%] sm:w-[75%] max-w-[calc(100%-3rem)] mx-auto px-2">
+                   <div className="w-[85%] sm:w-[90%] max-w-[min(100%-2rem,72rem)] mx-auto px-2">
                      <div className="bg-black/85 backdrop-blur-md rounded-md px-2 sm:px-3 py-1.5 shadow-2xl border border-white/10">
                        <div className="space-y-0.5">
                          {displayedSubtitle.map((line, index) => (
@@ -701,7 +716,7 @@ export default function VoiceTherapyTestPage() {
 
                  {/* 用户说话字幕 - 在用户说话时显示，包括倒计时期间 */}
                  {transcript && status === "listening" && isUserSpeaking && (
-                   <div className="w-[85%] sm:w-[75%] max-w-[calc(100%-3rem)] mx-auto px-2">
+                   <div className="w-[85%] sm:w-[90%] max-w-[min(100%-2rem,72rem)] mx-auto px-2">
                      <div className="bg-green-500/20 backdrop-blur-md rounded-md px-3 py-1.5 border border-green-400/30">
                        <p className="text-green-100 text-[10px] leading-snug text-center italic break-words">{transcript}</p>
                      </div>
