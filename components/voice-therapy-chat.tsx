@@ -961,27 +961,25 @@ export default function VoiceTherapyChat() {
       {/* Main Content Area */}
       <div className="flex-1 flex items-center justify-center p-0 sm:p-2 pt-16 sm:pt-20 pb-32 sm:pb-32">
         <div className="relative w-full h-full sm:h-[85vh] sm:max-w-6xl">
-          {/* Subtitle Display - positioned at top of video */}
-          <div className="absolute top-8 sm:top-12 left-0 right-0 flex justify-center z-40 px-4">
-            {currentText && (
-              <div className="w-full max-w-full sm:max-w-[640px] px-2">
+          {/* Subtitle Display - positioned at top of video, strictly within video width */}
+          <div className="absolute top-8 sm:top-12 left-1/2 -translate-x-1/2 z-40 w-full sm:w-[640px]">
+            <div className="px-4">
+              {currentText && (
                 <div className="bg-black/80 backdrop-blur-md rounded-lg px-4 py-2.5 shadow-2xl border border-white/10">
                   <p className="text-white text-sm sm:text-base leading-relaxed text-center break-words">
                     {currentText}
                   </p>
                 </div>
-              </div>
-            )}
+              )}
 
-            {transcript && status === "listening" && !currentText && (
-              <div className="w-full max-w-full sm:max-w-[640px] px-2">
+              {transcript && status === "listening" && !currentText && (
                 <div className="bg-green-500/25 backdrop-blur-md rounded-lg px-4 py-2 border border-green-400/40">
                   <p className="text-green-100 text-xs sm:text-sm text-center italic break-words">
                     {transcript}
                   </p>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           <VideoAvatar
@@ -991,8 +989,8 @@ export default function VoiceTherapyChat() {
             currentText={currentText}
           />
         
-               {/* Control panel overlay - positioned higher to avoid blocking video */}
-               <div className="absolute bottom-64 sm:bottom-32 left-0 right-0 flex flex-col items-center gap-3 sm:gap-4 px-4 z-50">
+               {/* Control panel overlay - positioned below mouth, above company info */}
+               <div className="absolute bottom-32 sm:bottom-24 left-0 right-0 flex flex-col items-center gap-2 sm:gap-3 px-4 z-50">
                  {/* Status indicator */}
                  <div className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-white/90 backdrop-blur-md rounded-full border border-indigo-200 shadow-lg shadow-indigo-200/50">
             <div
