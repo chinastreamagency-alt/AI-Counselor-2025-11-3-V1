@@ -53,6 +53,7 @@ export default function VoiceTherapyTestPage() {
   const countdownTimerRef = useRef<NodeJS.Timeout | null>(null) // 2秒倒计时计时器
   const audioDurationRef = useRef(0) // 音频总时长（秒）
   const lastSpeechTimeRef = useRef<number>(Date.now()) // 上次检测到语音的时间
+  const handleUserSpeechRef = useRef<((text: string) => Promise<void>) | null>(null) // 用户语音处理函数ref
 
   // 将文本分割成单词，用于逐字显示（模拟真实TTS速度）
   const splitIntoWords = (text: string): string[] => {
@@ -210,14 +211,13 @@ export default function VoiceTherapyTestPage() {
 
         const timeSinceLastSpeech = Date.now() - lastSpeechTimeRef.current
 
-        // 如果 2 秒内没有新语音，开始倒计时
-        if (timeSinceLastSpeech > 2000 && lastTranscriptRef.current.trim()) {
+        // 如果 8 秒内没有新语音，开始倒计时
+        if (timeSinceLastSpeech > 8000 && lastTranscriptRef.current.trim()) {
           setIsUserSpeaking(false)
 
-          // 开始 2 秒倒计时
+          // 开始 2 秒倒计时（总等待时间10秒：8秒静默 + 2秒倒计时）
           if (countdownTimerRef.current === null) {
             setWaitingCountdown(2)
-            setTranscript("") // 清空显示，改为显示倒计时
 
             let countdown = 2
             countdownTimerRef.current = setInterval(() => {
@@ -230,10 +230,13 @@ export default function VoiceTherapyTestPage() {
                   countdownTimerRef.current = null
                 }
 
-                // 倒计时结束，发送给 AI
+                // 倒计时结束，发送给 AI（不清空transcript，让用户看到完整内容）
                 console.log("[Whisper] Sending to AI:", lastTranscriptRef.current)
-                handleUserSpeech(lastTranscriptRef.current.trim())
+                if (handleUserSpeechRef.current) {
+                  handleUserSpeechRef.current(lastTranscriptRef.current.trim())
+                }
                 lastTranscriptRef.current = ""
+                setTranscript("") // 发送后清空显示
                 setWaitingCountdown(0)
               }
             }, 1000)
@@ -397,13 +400,7 @@ export default function VoiceTherapyTestPage() {
       if (!text.trim()) return
 
       shouldListenRef.current = false
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop()
-        } catch (e) {
-          console.error("[Test] Error stopping recognition:", e)
-        }
-      }
+      stopListening() // 停止录音
 
       setStatus("processing")
       setCurrentSpeaker("user")
@@ -471,8 +468,13 @@ export default function VoiceTherapyTestPage() {
         startListening()
       }
     },
-    [messages, isAudioEnabled, speakText, startListening],
+    [messages, isAudioEnabled, speakText, startListening, stopListening],
   )
+
+  // 更新ref
+  useEffect(() => {
+    handleUserSpeechRef.current = handleUserSpeech
+  }, [handleUserSpeech])
 
   const startSession = useCallback(() => {
     setMessages([])
@@ -679,15 +681,15 @@ export default function VoiceTherapyTestPage() {
                    </div>
                  )}
 
-                 {/* AI 说话字幕 - 逐字显示，最多5行，更宽显示 */}
+                 {/* AI 说话字幕 - 逐字显示，最多5行，宽度不超过视频容器 */}
                  {displayedSubtitle.length > 0 && status === "speaking" && (
-                   <div className="w-[92%] sm:w-[75%] max-w-2xl px-2">
-                     <div className="bg-black/85 backdrop-blur-md rounded-md px-3 py-1.5 shadow-2xl border border-white/10">
+                   <div className="w-[85%] sm:w-[75%] max-w-[calc(100%-3rem)] mx-auto px-2">
+                     <div className="bg-black/85 backdrop-blur-md rounded-md px-2 sm:px-3 py-1.5 shadow-2xl border border-white/10">
                        <div className="space-y-0.5">
                          {displayedSubtitle.map((line, index) => (
                            <p
                              key={index}
-                             className="text-white text-[11px] sm:text-xs leading-snug text-center break-words"
+                             className="text-white text-[10px] sm:text-[11px] leading-snug text-center break-words"
                            >
                              {line}
                            </p>
@@ -697,9 +699,9 @@ export default function VoiceTherapyTestPage() {
                    </div>
                  )}
 
-                 {/* 用户说话字幕 - 只在正在说话且没有倒计时时显示 */}
-                 {transcript && status === "listening" && waitingCountdown === 0 && isUserSpeaking && (
-                   <div className="w-[85%] max-w-sm px-2">
+                 {/* 用户说话字幕 - 在用户说话时显示，包括倒计时期间 */}
+                 {transcript && status === "listening" && isUserSpeaking && (
+                   <div className="w-[85%] sm:w-[75%] max-w-[calc(100%-3rem)] mx-auto px-2">
                      <div className="bg-green-500/20 backdrop-blur-md rounded-md px-3 py-1.5 border border-green-400/30">
                        <p className="text-green-100 text-[10px] leading-snug text-center italic break-words">{transcript}</p>
                      </div>
