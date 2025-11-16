@@ -35,7 +35,12 @@ export default function VoiceTherapyTestPage() {
   const [isUserSpeaking, setIsUserSpeaking] = useState(false) // 用户是否正在说话
   const [isAudioPlaying, setIsAudioPlaying] = useState(false) // 音频是否真正播放
 
-  const recognitionRef = useRef<any>(null)
+  // Whisper 录音相关 refs
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
+  const audioStreamRef = useRef<MediaStream | null>(null)
+  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null)
+
   const audioRef = useRef<HTMLAudioElement>(null)
   const shouldListenRef = useRef(false)
   const sessionTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -47,6 +52,7 @@ export default function VoiceTherapyTestPage() {
   const currentSentenceIndexRef = useRef(0) // 当前显示到第几句
   const countdownTimerRef = useRef<NodeJS.Timeout | null>(null) // 2秒倒计时计时器
   const audioDurationRef = useRef(0) // 音频总时长（秒）
+  const lastSpeechTimeRef = useRef<number>(Date.now()) // 上次检测到语音的时间
 
   // 将文本分割成单词，用于逐字显示（模拟真实TTS速度）
   const splitIntoWords = (text: string): string[] => {
@@ -107,146 +113,167 @@ export default function VoiceTherapyTestPage() {
     subtitleTimerRef.current = setInterval(showNextWord, msPerWord)
   }, [])
 
-  useEffect(() => {
-    if (typeof window !== "undefined" && "webkitSpeechRecognition" in window) {
-      const SpeechRecognition = (window as any).webkitSpeechRecognition
-      recognitionRef.current = new SpeechRecognition()
-      recognitionRef.current.continuous = true
-      recognitionRef.current.interimResults = true
-      recognitionRef.current.lang = "en-US" // 英文识别
-      recognitionRef.current.maxAlternatives = 3
+  // ==================== Whisper 语音识别（替代 Web Speech API）====================
 
-      recognitionRef.current.onresult = (event: any) => {
-        if (isAISpeakingRef.current) {
-          console.log("[Test] Ignoring speech during AI playback")
-          return
-        }
+  // 发送音频到 Whisper API
+  const sendToWhisper = useCallback(async (audioBlob: Blob) => {
+    if (audioBlob.size < 1000) {
+      console.log("[Whisper] Audio too short, skipping")
+      return
+    }
 
-        let interimTranscript = ""
-        let finalTranscript = ""
+    try {
+      console.log("[Whisper] Sending audio to API:", audioBlob.size, "bytes")
 
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const transcript = event.results[i][0].transcript
-          if (event.results[i].isFinal) {
-            finalTranscript += transcript + " "
-          } else {
-            interimTranscript += transcript
-          }
-        }
+      const formData = new FormData()
+      formData.append('audio', audioBlob, 'recording.webm')
 
-        const currentTranscript = interimTranscript || finalTranscript
-        setTranscript(currentTranscript)
+      const response = await fetch('/api/groq-whisper', {
+        method: 'POST',
+        body: formData,
+      })
 
-        // 用户正在说话
+      if (!response.ok) {
+        console.error("[Whisper] API error:", response.status)
+        return
+      }
+
+      const data = await response.json()
+      const recognizedText = data.text?.trim()
+
+      if (recognizedText && recognizedText.length > 0) {
+        console.log("[Whisper] Recognized:", recognizedText)
+
+        // 累积识别文本
+        lastTranscriptRef.current += recognizedText + " "
+        setTranscript(lastTranscriptRef.current)
         setIsUserSpeaking(true)
-        setWaitingCountdown(0) // 说话时不显示倒计时
+        lastSpeechTimeRef.current = Date.now()
 
-        // 清除之前的静默计时器和倒计时
-        if (silenceTimerRef.current) {
-          clearTimeout(silenceTimerRef.current)
-        }
+        // 重置倒计时
         if (countdownTimerRef.current) {
           clearInterval(countdownTimerRef.current)
         }
+        setWaitingCountdown(0)
+      }
+    } catch (error) {
+      console.error("[Whisper] Error:", error)
+    }
+  }, [])
 
-        // 如果有最终文本，累积到 lastTranscriptRef
-        if (finalTranscript.trim()) {
-          lastTranscriptRef.current += finalTranscript
-          console.log("[Test] Accumulated transcript:", lastTranscriptRef.current)
+  // 开始录音（使用 MediaRecorder）
+  const startListening = useCallback(async () => {
+    if (isAISpeakingRef.current) {
+      console.log("[Whisper] Not starting - AI is speaking")
+      return
+    }
+
+    console.log("[Whisper] Starting recording...")
+    setStatus("listening")
+    shouldListenRef.current = true
+    setCurrentSpeaker(null)
+    setCurrentText("")
+
+    try {
+      // 请求麦克风权限
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
         }
+      })
 
-        // 设置新的静默计时器 - 2秒没有新的语音输入就发送（更灵敏）
-        silenceTimerRef.current = setTimeout(() => {
-          // 用户停止说话
+      audioStreamRef.current = stream
+
+      // 创建 MediaRecorder
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4'
+      const mediaRecorder = new MediaRecorder(stream, { mimeType })
+      mediaRecorderRef.current = mediaRecorder
+      audioChunksRef.current = []
+
+      // 收集音频数据
+      mediaRecorder.ondataavailable = async (event) => {
+        if (event.data.size > 0 && shouldListenRef.current) {
+          const audioBlob = event.data
+          // 异步发送到 Whisper API
+          sendToWhisper(audioBlob)
+        }
+      }
+
+      // 每 2 秒生成一个音频片段并发送
+      mediaRecorder.start(2000)
+
+      // 检测静默
+      recordingIntervalRef.current = setInterval(() => {
+        if (!shouldListenRef.current) return
+
+        const timeSinceLastSpeech = Date.now() - lastSpeechTimeRef.current
+
+        // 如果 2 秒内没有新语音，开始倒计时
+        if (timeSinceLastSpeech > 2000 && lastTranscriptRef.current.trim()) {
           setIsUserSpeaking(false)
 
-          if (lastTranscriptRef.current.trim()) {
-            // 开始显示2秒倒计时
+          // 开始 2 秒倒计时
+          if (countdownTimerRef.current === null) {
             setWaitingCountdown(2)
-            setTranscript("") // 清空transcript，显示倒计时
+            setTranscript("") // 清空显示，改为显示倒计时
 
             let countdown = 2
             countdownTimerRef.current = setInterval(() => {
               countdown--
               setWaitingCountdown(countdown)
+
               if (countdown <= 0) {
                 if (countdownTimerRef.current) {
                   clearInterval(countdownTimerRef.current)
+                  countdownTimerRef.current = null
                 }
-                // 倒计时结束，发送用户输入
-                console.log("[Test] Countdown finished, sending:", lastTranscriptRef.current)
+
+                // 倒计时结束，发送给 AI
+                console.log("[Whisper] Sending to AI:", lastTranscriptRef.current)
                 handleUserSpeech(lastTranscriptRef.current.trim())
                 lastTranscriptRef.current = ""
                 setWaitingCountdown(0)
               }
             }, 1000)
           }
-        }, 2000) // 2秒静默后开始倒计时（更灵敏）
-      }
-
-      recognitionRef.current.onerror = (event: any) => {
-        console.error("[Test] Speech recognition error:", event.error)
-        if (event.error !== "no-speech" && event.error !== "aborted") {
-          setTimeout(() => {
-            if (shouldListenRef.current && !isAISpeakingRef.current) {
-              try {
-                recognitionRef.current?.start()
-              } catch (e) {
-                console.error("[Test] Error restarting recognition:", e)
-              }
-            }
-          }, 1000)
         }
-      }
+      }, 500)
 
-      recognitionRef.current.onend = () => {
-        if (shouldListenRef.current && !isAISpeakingRef.current) {
-          try {
-            recognitionRef.current?.start()
-          } catch (e) {
-            console.error("[Test] Error restarting recognition:", e)
-          }
-        }
-      }
+      console.log("[Whisper] Recording started successfully")
+    } catch (error) {
+      console.error("[Whisper] Microphone access error:", error)
+      setStatus("idle")
+      alert("无法访问麦克风，请检查浏览器权限设置")
     }
+  }, [sendToWhisper])
 
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop()
-      }
-    }
-  }, [])
-
-  const startListening = useCallback(() => {
-    if (isAISpeakingRef.current) {
-      console.log("[Test] Not starting listening - AI is speaking")
-      return
-    }
-
-    console.log("[Test] Starting to listen for user speech...")
-    setStatus("listening")
-    shouldListenRef.current = true
-    setCurrentSpeaker(null)
-    setCurrentText("")
-
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.start()
-      } catch (error) {
-        console.error("[Test] Error starting recognition:", error)
-      }
-    }
-  }, [])
-
+  // 停止录音
   const stopListening = useCallback(() => {
-    console.log("[Test] Stopping listening")
+    console.log("[Whisper] Stopping recording")
     shouldListenRef.current = false
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop()
-      } catch (error) {
-        console.error("[Test] Error stopping recognition:", error)
-      }
+
+    // 清除定时器
+    if (recordingIntervalRef.current) {
+      clearInterval(recordingIntervalRef.current)
+      recordingIntervalRef.current = null
+    }
+
+    if (countdownTimerRef.current) {
+      clearInterval(countdownTimerRef.current)
+      countdownTimerRef.current = null
+    }
+
+    // 停止 MediaRecorder
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop()
+    }
+
+    // 停止音频流
+    if (audioStreamRef.current) {
+      audioStreamRef.current.getTracks().forEach(track => track.stop())
+      audioStreamRef.current = null
     }
   }, [])
 
@@ -472,7 +499,7 @@ export default function VoiceTherapyTestPage() {
   }, [isAudioEnabled, speakText, startListening])
 
   const stopSession = useCallback(() => {
-    console.log("[Test] Stopping session and resetting all state")
+    console.log("[Whisper] Stopping session and resetting all state")
 
     shouldListenRef.current = false
     isAISpeakingRef.current = false
@@ -498,13 +525,24 @@ export default function VoiceTherapyTestPage() {
       countdownTimerRef.current = null
     }
 
-    // 停止语音识别
-    if (recognitionRef.current) {
+    if (recordingIntervalRef.current) {
+      clearInterval(recordingIntervalRef.current)
+      recordingIntervalRef.current = null
+    }
+
+    // 停止 MediaRecorder
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       try {
-        recognitionRef.current.stop()
+        mediaRecorderRef.current.stop()
       } catch (e) {
-        console.error("[Test] Error stopping recognition:", e)
+        console.error("[Whisper] Error stopping MediaRecorder:", e)
       }
+    }
+
+    // 停止音频流
+    if (audioStreamRef.current) {
+      audioStreamRef.current.getTracks().forEach(track => track.stop())
+      audioStreamRef.current = null
     }
 
     // 停止音频播放
@@ -531,7 +569,7 @@ export default function VoiceTherapyTestPage() {
     lastTranscriptRef.current = ""
     currentSentenceIndexRef.current = 0
 
-    console.log("[Test] Session stopped, all state reset")
+    console.log("[Whisper] Session stopped, all state reset")
   }, [])
 
   const toggleAudio = useCallback(() => {
