@@ -29,9 +29,9 @@ export default function VoiceTherapyTestPage() {
   const [sessionDuration, setSessionDuration] = useState(0)
   const [currentSpeaker, setCurrentSpeaker] = useState<"user" | "assistant" | null>(null)
   const [currentText, setCurrentText] = useState("")
-  const [displayedSubtitle, setDisplayedSubtitle] = useState<string[]>([]) // 改为数组，最多显示4行
+  const [displayedSubtitle, setDisplayedSubtitle] = useState<string[]>([]) // 改为数组，最多显示5行
   const [elevenLabsError, setElevenLabsError] = useState<string | null>(null)
-  const [waitingCountdown, setWaitingCountdown] = useState(0) // 倒计时：8秒等待
+  const [waitingCountdown, setWaitingCountdown] = useState(0) // 倒计时：2秒等待（更灵敏）
   const [isUserSpeaking, setIsUserSpeaking] = useState(false) // 用户是否正在说话
   const [isAudioPlaying, setIsAudioPlaying] = useState(false) // 音频是否真正播放
 
@@ -45,18 +45,24 @@ export default function VoiceTherapyTestPage() {
   const lastTranscriptRef = useRef("")
   const subtitleTimerRef = useRef<NodeJS.Timeout | null>(null) // 字幕滚动计时器
   const currentSentenceIndexRef = useRef(0) // 当前显示到第几句
-  const countdownTimerRef = useRef<NodeJS.Timeout | null>(null) // 8秒倒计时计时器
+  const countdownTimerRef = useRef<NodeJS.Timeout | null>(null) // 2秒倒计时计时器
+  const audioDurationRef = useRef(0) // 音频总时长（秒）
 
   // 将文本分割成单词，用于逐字显示（模拟真实TTS速度）
   const splitIntoWords = (text: string): string[] => {
     return text.split(' ').filter(w => w.length > 0)
   }
 
-  // 智能字幕显示 - 监听音频播放进度，实时同步
-  const displaySubtitlesSyncWithSpeech = useCallback((fullText: string) => {
+  // 智能字幕显示 - 根据音频时长精确同步
+  const displaySubtitlesSyncWithSpeech = useCallback((fullText: string, audioDuration: number) => {
     const words = splitIntoWords(fullText)
+    if (words.length === 0) return
+
     let currentWordIndex = 0
     setDisplayedSubtitle([]) // 清空之前的字幕
+
+    // 计算每个单词的显示时间（音频时长/单词数）
+    const msPerWord = (audioDuration * 1000) / words.length
 
     const showNextWord = () => {
       if (currentWordIndex >= words.length) {
@@ -71,8 +77,8 @@ export default function VoiceTherapyTestPage() {
       setDisplayedSubtitle(prev => {
         const currentText = prev.join(' ') + (prev.length > 0 ? ' ' : '') + word
 
-        // 每行25个字符（更窄，适配视频宽度），最多4行
-        const maxCharsPerLine = 25
+        // 每行35个字符（更宽，显示更多内容），最多5行
+        const maxCharsPerLine = 35
         const lines: string[] = []
         let currentLine = ''
 
@@ -89,15 +95,16 @@ export default function VoiceTherapyTestPage() {
           lines.push(currentLine)
         }
 
-        // 只保留最后4行
-        return lines.slice(-4)
+        // 只保留最后5行
+        return lines.slice(-5)
       })
 
       currentWordIndex++
     }
 
-    // 每200ms显示一个单词（更快，更同步）
-    subtitleTimerRef.current = setInterval(showNextWord, 200)
+    // 根据音频时长动态调整显示速度
+    console.log(`[Subtitle] Audio duration: ${audioDuration}s, Words: ${words.length}, Speed: ${msPerWord}ms/word`)
+    subtitleTimerRef.current = setInterval(showNextWord, msPerWord)
   }, [])
 
   useEffect(() => {
@@ -148,17 +155,17 @@ export default function VoiceTherapyTestPage() {
           console.log("[Test] Accumulated transcript:", lastTranscriptRef.current)
         }
 
-        // 设置新的静默计时器 - 8秒没有新的语音输入就发送
+        // 设置新的静默计时器 - 2秒没有新的语音输入就发送（更灵敏）
         silenceTimerRef.current = setTimeout(() => {
           // 用户停止说话
           setIsUserSpeaking(false)
 
           if (lastTranscriptRef.current.trim()) {
-            // 开始显示8秒倒计时
-            setWaitingCountdown(8)
+            // 开始显示2秒倒计时
+            setWaitingCountdown(2)
             setTranscript("") // 清空transcript，显示倒计时
 
-            let countdown = 8
+            let countdown = 2
             countdownTimerRef.current = setInterval(() => {
               countdown--
               setWaitingCountdown(countdown)
@@ -174,7 +181,7 @@ export default function VoiceTherapyTestPage() {
               }
             }, 1000)
           }
-        }, 8000) // 8秒静默后开始倒计时
+        }, 2000) // 2秒静默后开始倒计时（更灵敏）
       }
 
       recognitionRef.current.onerror = (event: any) => {
@@ -282,13 +289,21 @@ export default function VoiceTherapyTestPage() {
         if (audioRef.current) {
           audioRef.current.src = audioUrl
 
+          // 监听音频加载完成，获取时长
+          audioRef.current.onloadedmetadata = () => {
+            if (audioRef.current) {
+              audioDurationRef.current = audioRef.current.duration
+              console.log("[Test] Audio duration:", audioDurationRef.current, "seconds")
+            }
+          }
+
           // 监听音频开始播放事件 - 智能同步
           audioRef.current.onplay = () => {
             console.log("[Test] Audio started playing, starting subtitles")
             setStatus("speaking") // 音频真正播放时才改为 speaking
             setIsAudioPlaying(true)
-            // 音频开始播放时，才开始显示字幕
-            displaySubtitlesSyncWithSpeech(text)
+            // 音频开始播放时，根据音频时长同步显示字幕
+            displaySubtitlesSyncWithSpeech(text, audioDurationRef.current || 5)
           }
 
           audioRef.current.onended = () => {
@@ -607,7 +622,7 @@ export default function VoiceTherapyTestPage() {
                    </div>
                  )}
 
-                 {/* 等待用户说完话 - 8秒倒计时（只在停止说话后显示）*/}
+                 {/* 等待用户说完话 - 2秒倒计时（只在停止说话后显示）*/}
                  {waitingCountdown > 0 && status === "listening" && (
                    <div className="w-[85%] max-w-sm px-2">
                      <div className="bg-gradient-to-r from-blue-500/20 to-green-500/20 backdrop-blur-md rounded-lg px-3 py-2 border border-blue-400/30 shadow-lg">
@@ -619,22 +634,22 @@ export default function VoiceTherapyTestPage() {
                            </div>
                          </div>
                          <span className="text-blue-100 text-[10px] font-medium">
-                           Take your time...
+                           Processing in {waitingCountdown}s...
                          </span>
                        </div>
                      </div>
                    </div>
                  )}
 
-                 {/* AI 说话字幕 - 逐字显示，最多4行 */}
+                 {/* AI 说话字幕 - 逐字显示，最多5行，更宽显示 */}
                  {displayedSubtitle.length > 0 && status === "speaking" && (
-                   <div className="w-[85%] max-w-sm px-2">
+                   <div className="w-[92%] sm:w-[75%] max-w-2xl px-2">
                      <div className="bg-black/85 backdrop-blur-md rounded-md px-3 py-1.5 shadow-2xl border border-white/10">
-                       <div className="space-y-0">
+                       <div className="space-y-0.5">
                          {displayedSubtitle.map((line, index) => (
                            <p
                              key={index}
-                             className="text-white text-[10px] leading-snug text-center break-words"
+                             className="text-white text-[11px] sm:text-xs leading-snug text-center break-words"
                            >
                              {line}
                            </p>
@@ -661,8 +676,8 @@ export default function VoiceTherapyTestPage() {
                  )}
         </div>
 
-          {/* Call button - centered at bottom, smaller on PC */}
-          <div className="absolute bottom-8 sm:bottom-12 left-0 right-0 flex flex-col items-center gap-2 z-50">
+          {/* Call button - centered at bottom, higher position for mobile browsers */}
+          <div className="absolute bottom-20 sm:bottom-12 left-0 right-0 flex flex-col items-center gap-2 z-50 pb-safe">
           {status === "idle" ? (
             <button
               onClick={startSession}
